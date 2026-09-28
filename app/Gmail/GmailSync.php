@@ -6,6 +6,7 @@ use App\Gmail\Parsers\DiscoveryEmailParser;
 use App\Gmail\Parsers\EmailNotUnderstood;
 use App\Gmail\Parsers\EmailParser;
 use App\Gmail\Parsers\EmailToIgnore;
+use App\Gmail\Parsers\StandardBankEmailParser;
 use App\Models\GmailConnection;
 use App\Models\Household;
 use App\Models\IngestedEmail;
@@ -36,8 +37,9 @@ class GmailSync
         private EmailTransactions $transactions,
         private TransferPairer $pairer,
         DiscoveryEmailParser $discovery,
+        StandardBankEmailParser $standardBank,
     ) {
-        $this->parsers = [$discovery];
+        $this->parsers = [$discovery, $standardBank];
     }
 
     /** @return array{added: int, matched: int, other: int, finished: bool} */

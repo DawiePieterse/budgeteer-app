@@ -1,11 +1,13 @@
 <?php
 
+use App\Enums\Bank;
 use App\Enums\TransactionKind;
 use App\Gmail\GmailMessage;
 use App\Gmail\HtmlText;
 use App\Gmail\Parsers\DiscoveryEmailParser;
 use App\Gmail\Parsers\EmailNotUnderstood;
 use App\Gmail\Parsers\EmailToIgnore;
+use App\Gmail\Parsers\StandardBankEmailParser;
 use Carbon\CarbonImmutable;
 
 function discoveryEmail(string $html, string $subject = 'Transaction update — 27 Sep 2026 16:19:14'): GmailMessage
@@ -78,4 +80,49 @@ it('reads ATM withdrawals, which say "From account ending"', function () {
         ->and($e->cardEnding)->toBe('5678')
         ->and($e->cardholder)->toBe('Sam Smith')
         ->and($e->availableBalanceCents)->toBe(16586032);
+});
+
+it('reads card refunds, which say "To account ending"', function () {
+    $e = (new DiscoveryEmailParser)->parse(discoveryEmail(emailFixture('card-refund'), 'Transaction Update — 07 Sep 2026 06:01:53'));
+
+    expect($e->kind)->toBe(TransactionKind::Refund)
+        ->and($e->amountCents)->toBe(17600)
+        ->and($e->accountEnding)->toBe('1234')
+        ->and($e->cardEnding)->toBe('4321')
+        ->and($e->cardholder)->toBeNull();
+});
+
+it('reads incoming payments, with who paid from the reference', function () {
+    $e = (new DiscoveryEmailParser)->parse(discoveryEmail(emailFixture('incoming-payment'), 'Transaction Update — 04 Sep 2026 18:09:14'));
+
+    expect($e->kind)->toBe(TransactionKind::Deposit)
+        ->and($e->description)->toBe('J SMITH')
+        ->and($e->amountCents)->toBe(4000000)
+        ->and($e->accountEnding)->toBe('1234')
+        ->and($e->cardEnding)->toBeNull();
+});
+
+it('reads purchases in another currency, which have no rand amount', function () {
+    $e = (new DiscoveryEmailParser)->parse(discoveryEmail(emailFixture('foreign-card-payment'), 'Transaction update — 25 Aug 2026 10:34:02'));
+
+    expect($e->isForeign())->toBeTrue()
+        ->and($e->foreignCurrency)->toBe('KES')
+        ->and($e->foreignAmount)->toBe('250.00')
+        ->and($e->description)->toBe('Google One 650-2530000 US')
+        ->and($e->cardEnding)->toBe('5678');
+});
+
+it('reads Standard Bank MyUpdates payments', function () {
+    $message = new GmailMessage('s', 'Standard Bank <information@standardbank.co.za>', 'Standard Bank MyUpdates Notification',
+        CarbonImmutable::parse('2026-09-28 16:24'), HtmlText::plain((string) file_get_contents(__DIR__.'/../Fixtures/emails/standard-bank/myupdates-paid.txt')));
+    $parser = new StandardBankEmailParser;
+
+    expect($parser->recognises($message))->toBeTrue();
+    $e = $parser->parse($message);
+    expect($e->bank)->toBe(Bank::StandardBank)
+        ->and($e->kind)->toBe(TransactionKind::Payment)
+        ->and($e->description)->toBe('A HELPER CLEANING')
+        ->and($e->amountCents)->toBe(-20000)
+        ->and($e->accountEnding)->toBe('5678')
+        ->and($e->occurredAt->format('Y-m-d H:i'))->toBe('2026-09-28 16:24');
 });

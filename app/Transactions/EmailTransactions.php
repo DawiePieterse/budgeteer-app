@@ -3,12 +3,15 @@
 namespace App\Transactions;
 
 use App\Enums\AccountKind;
+use App\Enums\Bank;
 use App\Enums\TransactionKind;
 use App\Enums\TransactionSource;
+use App\Gmail\Parsers\EmailToIgnore;
 use App\Gmail\Parsers\ParsedEmail;
 use App\Models\Account;
 use App\Models\Card;
 use App\Models\Category;
+use App\Models\Household;
 use App\Models\IngestedEmail;
 use App\Models\Merchant;
 use App\Models\Transaction;
@@ -31,7 +34,9 @@ class EmailTransactions
     {
         $account = Account::withoutGlobalScopes()->firstOrCreate(
             ['household_id' => $householdId, 'bank' => $email->bank, 'number_ending' => $email->accountEnding],
-            ['kind' => AccountKind::CreditCard, 'name' => 'Credit card'],
+            $email->bank === Bank::StandardBank
+                ? ['kind' => AccountKind::Cheque, 'name' => 'Cheque account']
+                : ['kind' => AccountKind::CreditCard, 'name' => 'Credit card'],
         );
 
         $card = null;
@@ -45,17 +50,32 @@ class EmailTransactions
             }
         }
 
-        $existing = $this->statementLine($email, $account);
+        $existing = $email->isForeign() ? $this->foreignStatementLine($email, $account) : $this->statementLine($email, $account);
+        if ($existing === null && $email->isForeign()) {
+            // The rand amount is only on the statement; the purchase is added when it is imported.
+            throw new EmailToIgnore("Paid in {$email->foreignCurrency} {$email->foreignAmount}; the rand amount comes from the statement.");
+        }
         if ($existing !== null) {
             $existing->update(['card_id' => $card?->id, 'occurred_at' => $email->occurredAt, 'person_id' => $card?->charge_to_person_id]);
 
             return [$existing, true];
         }
 
-        $key = $email->kind === TransactionKind::Cash ? 'CASH' : $this->merchantKey->for($email->description);
-        $categoryId = $email->kind === TransactionKind::Cash
-            ? Category::withoutGlobalScopes()->where('household_id', $householdId)->where('name', 'Cash')->value('id')
-            : Merchant::withoutGlobalScopes()->where('household_id', $householdId)->where('key', $key)->value('category_id');
+        $household = Household::query()->findOrFail($householdId);
+        $kind = $email->kind;
+        if (in_array($kind, [TransactionKind::Deposit, TransactionKind::Payment], true) && $this->isOwnName($email->description, $household->ownAccountNames())) {
+            $kind = TransactionKind::Transfer; // for example the card repayment "DJ PIETERSE"
+        }
+        $key = match ($kind) {
+            TransactionKind::Cash => 'CASH',
+            TransactionKind::Transfer => 'OWN ACCOUNTS',
+            default => $this->merchantKey->for($email->description),
+        };
+        $categoryId = match ($kind) {
+            TransactionKind::Cash => Category::withoutGlobalScopes()->where('household_id', $householdId)->where('name', 'Cash')->value('id'),
+            TransactionKind::Transfer => null,
+            default => Merchant::withoutGlobalScopes()->where('household_id', $householdId)->where('key', $key)->value('category_id'),
+        };
 
         $transaction = Transaction::create([
             'household_id' => $householdId,
@@ -67,12 +87,39 @@ class EmailTransactions
             'description' => mb_substr($email->description, 0, 255),
             'merchant_key' => $key,
             'amount_cents' => $email->amountCents,
-            'kind' => $email->kind,
+            'kind' => $kind,
+            'is_transfer' => $kind === TransactionKind::Transfer,
             'category_id' => $categoryId,
             'person_id' => $card?->charge_to_person_id,
         ]);
 
         return [$transaction, false];
+    }
+
+    /** A statement line in rand for a purchase in another currency: its description shows "250.00 KES". */
+    private function foreignStatementLine(ParsedEmail $email, Account $account): ?Transaction
+    {
+        return Transaction::withoutGlobalScopes()
+            ->where('account_id', $account->id)
+            ->where('source', TransactionSource::Statement)
+            ->where('description', 'like', '%'.$email->foreignAmount.' '.$email->foreignCurrency.'%')
+            ->whereBetween('posted_on', [$email->occurredAt->subDay()->toDateString(), $email->occurredAt->addDays(self::STATEMENT_LAG_DAYS)->toDateString()])
+            ->whereNotIn('id', IngestedEmail::withoutGlobalScopes()->whereNotNull('transaction_id')->select('transaction_id'))
+            ->orderBy('posted_on')
+            ->first();
+    }
+
+    /** @param list<string> $ownNames */
+    private function isOwnName(string $description, array $ownNames): bool
+    {
+        $d = strtoupper(trim($description));
+        foreach ($ownNames as $name) {
+            if ($name !== '' && str_starts_with($d, $name)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** A statement line for the same purchase that no email has claimed yet. */

@@ -23,10 +23,14 @@ use Carbon\CarbonImmutable;
  */
 class DiscoveryEmailParser implements EmailParser
 {
-    private const MERCHANT_AND_AMOUNT = '/^(.+?)\s+[–—-]\s+(R\s?[\d,]+\.\d{2})$/u';
+    /** "Checkers Sixty60 Cape To – R 469.88", or in another currency "Google One 650-2530000 US – KES 250.00". */
+    private const MERCHANT_AND_AMOUNT = '/^(.+?)\s+[–—-]\s+(R|[A-Z]{3})\s?([\d,]+\.\d{2})$/u';
 
-    /** "From ***4813", or "From account ending ***4813" on ATM withdrawals. */
-    private const FROM = '/^From\s+(?:account ending\s+)?\**(\d{4})\b/i';
+    /** An amount on its own line, as on incoming payments. */
+    private const AMOUNT_ONLY = '/^R\s?([\d,]+\.\d{2})$/';
+
+    /** "From ***4813", "From account ending ***4813" (ATM), "To account ending ***4813" (refunds, payments in). */
+    private const FROM = '/^(?:From|To|On)\s+(?:account ending\s+)?\**(\d{4})\b/i';
 
     public function recognises(GmailMessage $message): bool
     {
@@ -37,13 +41,24 @@ class DiscoveryEmailParser implements EmailParser
     public function parse(GmailMessage $message): ParsedEmail
     {
         $lines = $message->lines;
+        $currency = 'R';
         $index = $this->find($lines, self::MERCHANT_AND_AMOUNT);
-        if ($index === null) {
-            throw new EmailNotUnderstood('No amount found.');
+        if ($index !== null) {
+            preg_match(self::MERCHANT_AND_AMOUNT, $lines[$index], $m);
+            $description = trim(preg_replace('/^At\s+/i', '', $m[1]) ?? $m[1]); // ATM emails: "At Cnr N7 and …"
+            [$currency, $amount] = [$m[2], $m[3]];
+        } else {
+            // Incoming payment: the amount on its own line, and who paid under "Reference:".
+            $index = $this->find($lines, self::AMOUNT_ONLY);
+            if ($index === null) {
+                throw new EmailNotUnderstood('No amount found.');
+            }
+            preg_match(self::AMOUNT_ONLY, $lines[$index], $m);
+            $amount = $m[1];
+            $reference = $this->find($lines, '/^Reference:/i');
+            $description = $reference !== null ? trim(substr($lines[$reference], strlen('Reference:'))) : ($lines[$index - 1] ?? 'Payment');
         }
-        preg_match(self::MERCHANT_AND_AMOUNT, $lines[$index], $m);
-        $description = trim(preg_replace('/^At\s+/i', '', $m[1]) ?? $m[1]); // ATM emails: "At Cnr N7 and …"
-        $cents = abs(Money::toCents($m[2]));
+        $cents = $currency === 'R' ? abs(Money::toCents($amount)) : 0;
         $heading = $index > 0 ? $lines[$index - 1] : '';
 
         $kind = $this->kind($heading);
@@ -77,6 +92,8 @@ class DiscoveryEmailParser implements EmailParser
             $cardholder,
             $this->when($message),
             $balance,
+            $currency === 'R' ? null : $currency,
+            $currency === 'R' ? null : $amount,
         );
     }
 
@@ -88,7 +105,7 @@ class DiscoveryEmailParser implements EmailParser
             str_contains($h, 'declin') || str_contains($h, 'unsuccessful') || str_contains($h, 'reversal') => throw new EmailToIgnore("Not a completed transaction: {$heading}"),
             str_contains($h, 'refund') => TransactionKind::Refund,
             str_contains($h, 'withdrawal') || str_contains($h, 'atm') => TransactionKind::Cash,
-            str_contains($h, 'received') || str_contains($h, 'deposit') || str_contains($h, 'money in') => TransactionKind::Deposit,
+            str_contains($h, 'incoming') || str_contains($h, 'received') || str_contains($h, 'deposit') || str_contains($h, 'money in') => TransactionKind::Deposit,
             str_contains($h, 'card payment') || str_contains($h, 'purchase') || str_contains($h, 'online payment') => TransactionKind::Purchase,
             default => throw new EmailNotUnderstood('Unknown kind of notification: '.mb_substr($heading, 0, 100)),
         };

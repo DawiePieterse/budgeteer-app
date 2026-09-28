@@ -20,5 +20,13 @@ final class ParsedEmail
         public readonly ?string $cardholder,
         public readonly CarbonImmutable $occurredAt,
         public readonly ?int $availableBalanceCents = null,
+        /** For purchases in another currency the email has no rand amount: "USD", "23.00". */
+        public readonly ?string $foreignCurrency = null,
+        public readonly ?string $foreignAmount = null,
     ) {}
+
+    public function isForeign(): bool
+    {
+        return $this->foreignCurrency !== null;
+    }
 }

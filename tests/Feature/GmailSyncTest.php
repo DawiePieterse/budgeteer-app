@@ -283,3 +283,38 @@ it('reads older labelled emails from a chosen day, and lists what was not read',
     Http::assertSent(fn (Request $r) => str_contains(urldecode($r->url()), 'q=after:2026/07/01'));
     $this->artisan('budgeteer:gmail-sync --list-unread')->expectsOutputToContain('Your statement is ready')->assertSuccessful();
 });
+
+it('records an incoming card repayment as a transfer, not income', function () {
+    $user = member(['own_account_names' => 'J SMITH']);
+    $connection = linkedGmail($user);
+    fakeGmail(['p' => gmailMessage('p', 'incoming-payment', 'Transaction Update — 04 Sep 2026 18:09:14')]);
+
+    app(GmailSync::class)->sync($connection);
+
+    $t = Transaction::withoutGlobalScopes()->sole();
+    expect($t->is_transfer)->toBeTrue()->and($t->amount_cents)->toBe(4000000);
+});
+
+it('gives a foreign-currency statement line its card, or waits for the statement', function () {
+    $user = member();
+    $this->actingAs($user);
+    // The statement line for the Google One purchase shows the foreign amount in its description.
+    $json = json_decode(fixtureText('discovery'), true);
+    array_walk_recursive($json, function (&$v) {
+        $v = $v === 'Yoco *Coffee Spot Paarl' ? 'Google One ...0000 250.00 KES' : $v;
+    });
+    $this->post('/statements/preview', ['text' => json_encode($json)]);
+    $this->post('/statements');
+    auth()->logout();
+
+    $connection = linkedGmail($user);
+    fakeGmail([
+        'g' => gmailMessage('g', 'foreign-card-payment', 'Transaction update — 30 Jun 2026 10:34:02', ['***1234' => '***9999']),
+        'u' => gmailMessage('u', 'foreign-card-payment', 'Transaction update — 25 Aug 2026 10:34:02', ['***1234' => '***9999', 'KES 250.00' => 'USD 23.00']),
+    ]);
+    app(GmailSync::class)->sync($connection);
+
+    expect(Transaction::withoutGlobalScopes()->where('description', 'like', 'Google One%')->sole()->card->number_ending)->toBe('5678')
+        ->and(IngestedEmail::withoutGlobalScopes()->where('gmail_message_id', 'u')->sole()->note)->toContain('Paid in USD 23.00')
+        ->and(Transaction::withoutGlobalScopes()->count())->toBe(8);
+});

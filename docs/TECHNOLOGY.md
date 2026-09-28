@@ -359,6 +359,18 @@ transactions, and every line's amount matched the change in the running balance.
 
 A made-up statement in the same layout is the Pest fixture for `DiscoveryBankStatement`.
 
+### Kinds of bank email read (checked against real emails)
+
+| Email | Layout | Recorded as |
+|---|---|---|
+| Discovery "Card payment" | Merchant – R amount, From ***acct, cardholder (extra cards only), Card ending | Purchase, with card |
+| Discovery "Card refund" | Merchant – R amount, **To account ending** ***acct, Card ending | Refund |
+| Discovery "ATM withdrawal" | At place - R amount, From **account ending** ***acct | Cash |
+| Discovery "Incoming payment" | R amount on its own line, To account ending, Reference: payer | Money in, or a transfer when the payer is an own-account name |
+| Discovery "Card declined" | | Skipped |
+| Discovery card payment in another currency | Merchant – USD 23.00 (no rand amount) | Matched to the statement line whose description shows "23.00 USD", giving it the card; otherwise left for the statement |
+| Standard Bank "MyUpdates Notification" | "An amount of R200.00 was paid from Standard Bank account ending in 3445 to PAYEE on 2026-09-28." | Payment (or money in) on the cheque account |
+
 ### Discovery Bank notification email (checked against a real email)
 
 Subject `Transaction update — <date> <time>`, from Discovery Bank, one transaction per email. The body is a

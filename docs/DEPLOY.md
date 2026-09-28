@@ -107,7 +107,7 @@ may do that for up to 100 users, who each click through Google's "unverified app
 
 In **Gmail** (the account the banks email), create the filter:
 
-1. Search `from:discovery subject:"Transaction update"`, open the search options, **Create filter**.
+1. Search `from:(discovery OR standardbank) subject:("Transaction update" OR MyUpdates)`, open the search options, **Create filter**.
 2. Tick **Apply the label**, **New label…** `Budgeteer`, tick **Also apply filter to matching conversations**,
    **Create filter**.
 

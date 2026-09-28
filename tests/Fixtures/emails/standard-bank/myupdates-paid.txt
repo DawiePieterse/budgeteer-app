@@ -1,0 +1,10 @@
+Standard Bank MyUpdates Notification
+
+Dear JOHN SMITH,
+
+An amount of R200.00 was paid from Standard Bank account ending in 5678 to A HELPER CLEANING on 2026-09-28.
+
+The actual balance at the time of the above transaction was R17303.27.
+
+Regards,
+Standard Bank

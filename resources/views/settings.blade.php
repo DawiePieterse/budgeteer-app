@@ -78,7 +78,7 @@
         <details class="small">
             <summary>How to label the bank emails</summary>
             <ol>
-                <li>In Gmail on a computer, search for <code>from:discovery subject:"Transaction update"</code>.</li>
+                <li>In Gmail on a computer, search for <code>from:(discovery OR standardbank) subject:("Transaction update" OR MyUpdates)</code>.</li>
                 <li>Click the filter icon in the search box, then <strong>Create filter</strong>.</li>
                 <li>Tick <strong>Apply the label</strong>, choose <strong>New label…</strong>, name it <code>{{ \App\Models\GmailConnection::LABEL }}</code>.</li>
                 <li>Tick <strong>Also apply filter to matching conversations</strong> and click <strong>Create filter</strong>.</li>
