@@ -18,7 +18,7 @@ Node.js, Docker or always-on workers.
 | Database | MariaDB 10.11 in production; MySQL 8 in CI; MariaDB for local and cloud development |
 | Hosting | Afrihost Bronze Pro shared cPanel hosting (the Bowls Buddy package), LiteSpeed web server |
 | Domain | `budget.bowlsbuddy.co.za` |
-| Email source | Gmail API, read-only, one linked Gmail account per person; any number of banks per person |
+| Email source | Gmail API, read-only; one linked Gmail account (the one the banks email) feeds the whole household; any number of banks |
 | Code | GitHub (`DawiePieterse/budgeteer-app`), GitHub Actions for CI |
 | Tests | Pest (unit and feature), Playwright (phone-width browser flows) |
 | Quality | Laravel Pint (code style), Larastan / PHPStan level 6 (static analysis), `composer audit` |
@@ -69,17 +69,18 @@ large and mostly unused here.
 - **Security:** CSRF on every form, deletes by POST only, rate-limited routes, secure and encrypted session
   cookies bound to `budget.bowlsbuddy.co.za` only (no `SESSION_DOMAIN`), security headers and a strict CSP on
   every response, Gmail tokens encrypted with Laravel's `encrypted` cast.
-- **Privacy (POPIA):** data is stored in South Africa (Afrihost); each person can unlink Gmail, and
-  download or delete their own data.
+- **Privacy (POPIA):** data is stored in South Africa (Afrihost); the Gmail owner can unlink Gmail at any
+  time, and the household's data can be downloaded or deleted.
 
 ---
 
 ## 3. How a transaction gets in
 
-1. **Gmail filter.** Each person adds a Gmail filter that labels bank and card notifications `Budgeteer`.
-   The app only lists messages with that label.
+1. **Gmail filter.** The bank emails arrive in one person's Gmail. That person adds a Gmail filter that labels
+   bank and card notifications `Budgeteer`, and links that Gmail once. The app only lists messages with that
+   label.
 2. **Sync (every 5 minutes).** A scheduled job calls Gmail `history.list` from the last stored history ID for
-   each linked account and queues new message IDs. The first link does a full `messages.list` of the label.
+   the linked account and queues new message IDs. The first link does a full `messages.list` of the label.
 3. **Parse.** Each message is fetched, matched to a parser by sender, and turned into amount, date, merchant,
    card number ending, and type (purchase, refund, payment received). No match goes to the Claude fallback if
    it is on, otherwise to the review inbox as "could not read".
@@ -91,25 +92,25 @@ large and mostly unused here.
 7. **Match payments.** An incoming payment is offered as the settlement for open receivables of the same
    amount (section 6).
 
+Queued work uses Laravel's `database` queue, drained by the scheduler with
+`queue:work --stop-when-empty --max-time=50`, so nothing runs longer than one cron cycle.
+
 ### Banks
 
-Each person can have accounts at more than one bank, and the household starts with two banks. Every bank is
+The household starts with two banks, both emailing the same Gmail. Every bank is
 handled the same way, so adding one is a code change of a known size:
 
-1. Add its sender addresses to the person's `Budgeteer` Gmail filter.
+1. Add its sender addresses to the `Budgeteer` Gmail filter.
 2. Add a parser in `app/Parsers` (for example `FnbParser`, and one for the second bank) and register its
    senders in `email_sources`.
 3. Add redacted sample emails for every notification type the bank sends (purchase, refund, payment received,
    debit order, transfer) to `tests/Fixtures/emails/<bank>` with a Pest test for each.
 4. Cards and accounts at the new bank are created the first time a parsed email names a new number ending,
-   and the owner confirms them in the review inbox.
+   and are confirmed in the review inbox, with who uses each card (see "Who spent it" in section 6).
 
 Banks do not all email every kind of transaction; some only send debit orders by SMS or in the app. Before
 writing a parser, check a month of that bank's emails to see what arrives. Anything a bank does not email is
 covered by recurring payments marked paid by hand (section 7) or by manual entry.
-
-Queued work uses Laravel's `database` queue, drained by the scheduler with
-`queue:work --stop-when-empty --max-time=50`, so nothing runs longer than one cron cycle.
 
 ---
 
@@ -142,8 +143,14 @@ Each step runs only if the one before did not decide:
 
 ## 6. Sharing and reimbursements
 
-- **Household:** two users, each linking their own Gmail and cards. Everything is shared; a transaction can be
-  marked private, which shows only its amount and category to the other person.
+- **Household:** two users who see exactly the same data: every transaction, budget, recurring payment and
+  receivable. Only one of them links Gmail, because that is where the bank emails arrive; the other signs in
+  with Google and needs no Gmail link. There are no private transactions.
+- **Both can act:** either person can review, categorise, split and confirm. A change made by one shows for the
+  other on the next page load, and each change records who made it.
+- **Who spent it:** each card is assigned to the person who uses it (for example a secondary card in the
+  other person's name on the same account), so transactions show whose spending they were even though all
+  the emails come to one mailbox.
 - **Bought for someone else:** a transaction can be split, fully or partly, to a person. That part goes to
   `receivables` and does not count against the budget.
 - **Owed to me:** totals per person and age of each item; a one-tap WhatsApp request (`wa.me` link), as in
@@ -190,10 +197,10 @@ One database, `bowlsbg5n9w0_budgeteer`, created by Laravel migrations. Every tab
 | Tables | What they hold |
 |---|---|
 | `households`, `users` | The household, its members and their allowlisted Google emails |
-| `gmail_connections` | Encrypted refresh token, last history ID, last sync, status per linked Gmail account |
+| `gmail_connections` | Encrypted refresh token, last history ID, last sync and status for the linked Gmail account |
 | `email_sources` | Known senders and the parser each uses |
 | `ingested_emails` | Gmail message ID, sender, received time, parse status, error |
-| `accounts` | Cards and bank accounts, identified by the number ending, with an owner |
+| `accounts` | Cards and bank accounts, identified by the number ending, with the person who uses each |
 | `transactions`, `transaction_splits` | Transactions, with their source (email or entered by hand), and their parts (category, or person for a receivable) |
 | `recurring_payments`, `recurring_occurrences` | Expected monthly or yearly payments, and each period's occurrence with its status (due, paid, not seen, skipped) and linked transaction |
 | `categories`, `budgets`, `budget_periods` | Category tree with icons, amount per category per period |
@@ -235,7 +242,7 @@ a single file at level `error`, debug off.
 | Queue drain | 5 minutes (with the scheduler) |
 | Budget alerts and review reminders (web push) | Hourly |
 | Create recurring occurrences for a new period, flag ones not seen | Daily |
-| Refresh a Gmail link that failed, and notify its owner | Daily |
+| Refresh a Gmail link that failed, and notify both people | Daily |
 | SQL backup | Nightly |
 
 **Deploying:** `scripts/build-afrihost.sh` builds a ready-to-upload zip with `vendor/` included, as in Bowls
