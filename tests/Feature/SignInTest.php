@@ -71,3 +71,8 @@ it('creates the household and allowlist from the setup command', function () {
     expect(User::pluck('email')->all())->toBe(['a@example.com', 'b@example.com'])
         ->and(User::first()->household->name)->toBe('Smith');
 });
+
+it('shows the privacy page to anyone', function () {
+    $this->get('/privacy')->assertOk()->assertSee('Google API Services User Data Policy');
+    $this->actingAs(member())->get('/privacy')->assertOk();
+});

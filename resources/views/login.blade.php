@@ -7,6 +7,7 @@
         <h1>Budgeteer</h1>
         <p class="muted">The household budget, filled in from the bank.</p>
         <a class="button" href="{{ route('google.redirect') }}">Sign in with Google</a>
+        <p class="small"><a href="{{ route('privacy') }}">Privacy</a></p>
 
         @if ($devUsers->isNotEmpty())
             <div class="dev">

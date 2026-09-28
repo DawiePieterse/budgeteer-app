@@ -10,6 +10,8 @@ use App\Http\Controllers\TransactionController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
+Route::view('/privacy', 'privacy')->name('privacy');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', fn () => view('login', [
         'devUsers' => app()->isLocal() && config('budgeteer.dev_login') ? User::all() : collect(),
