@@ -96,12 +96,14 @@ It reads new bank emails from every linked Gmail account.
 In the **Google Cloud console**, project **Budgeteer**:
 
 1. **APIs & Services → Library**: search **Gmail API** and click **Enable**.
-2. **Google Auth Platform → Data access → Add or remove scopes**: add
-   `https://www.googleapis.com/auth/gmail.readonly` and save.
-3. **Google Auth Platform → Clients → Budgeteer web**: under **Authorised redirect URIs** add
+2. **Google Auth Platform → Clients → Budgeteer web**: under **Authorised redirect URIs** add
    `https://budget.bowlsbuddy.co.za/gmail/callback` (keep the sign-in one) and save.
-4. **Google Auth Platform → Audience**: the app must be **In production**. In Testing, Google withdraws Gmail
+3. **Google Auth Platform → Audience**: the app must be **In production**. In Testing, Google withdraws Gmail
    access after 7 days.
+
+Do **not** add the Gmail scope under **Data access**. That asks Google to verify the app, which for Gmail
+means a paid security assessment. Budgeteer asks for the scope itself when Gmail is linked; an unverified app
+may do that for up to 100 users, who each click through Google's "unverified app" warning once.
 
 In **Gmail** (the account the banks email), create the filter:
 
