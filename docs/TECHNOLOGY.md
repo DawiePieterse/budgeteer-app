@@ -42,7 +42,7 @@ scheduled jobs run by cPanel cron, so no background process has to stay alive.
 | `laravel-notification-channels/webpush` | 13 | Web push to the installed PWA (over budget, items to review, money owed) |
 | `anthropic-ai/sdk` (PHP) | 0.51 | Optional fallback: reads a bank email no parser recognises (section 5) |
 | `symfony/dom-crawler` | 7 or 8 | Reading values out of HTML bank emails |
-| `smalot/pdfparser` | 2 | Reading the text of PDF bank statements (pure PHP, so it runs on shared hosting) |
+| pdf.js (Mozilla) | 4.10 | Reading statement PDFs in the browser, vendored in `public/vendor/pdfjs` (no build step). The Standard Bank PDF is encrypted, which PHP PDF libraries refuse; pdf.js opens it, and also gives each amount's column position |
 
 Gmail is called through Laravel's HTTP client against the Gmail REST API, not `google/apiclient`, which is
 large and mostly unused here.
@@ -54,7 +54,9 @@ large and mostly unused here.
 | `app/Models` | `Household`, `User`, `GmailConnection`, `IngestedEmail`, `Account`, `Transaction`, `TransactionSplit`, `Category`, `Budget`, `Rule`, `Merchant`, `Person`, `Receivable`, `Settlement`, `RecurringPayment`, `RecurringOccurrence` |
 | `app/Services/Gmail` | OAuth tokens, `history.list` sync, message fetch |
 | `app/Parsers` | One parser per bank or card sender (`DiscoveryBankParser`, `StandardBankParser`), plus `ClaudeParser` as the fallback |
-| `app/Parsers/Statements` | One statement reader per bank and format (`DiscoveryBankStatement`, `StandardBankStatement`) |
+| `app/Statements` | Statement readers per bank (`Readers/StandardBankReader`, `Readers/DiscoveryBankReader`) and the balance check |
+| `app/Transactions` | Kind of each line (`Classifier`), merchant keys, the statement importer and transfer pairing |
+| `public/js/statement-text.js`, `public/js/statement-upload.js` | Turn a PDF into positioned lines of text on the phone; only that text is sent |
 | `app/Services` | Merchant clean-up, categorising, learning, budget periods, recurring payments, reimbursements, payment matching |
 | `app/Filament` | Settings pages and resources |
 | `app/Http/Controllers` | Phone screens: home, review inbox, transactions, recurring payments, owed to me |
@@ -241,8 +243,9 @@ starts, and every month to catch anything the notification emails missed.
 1. **Upload** the last three to six statements from each bank on the Statements screen: the Standard Bank
    cheque account and the Discovery credit card account (which includes Dewan's card). A CSV or OFX export from online banking is
    read in preference to a PDF where the bank offers one, because it has no layout to guess.
-2. **Unlock.** A password-protected PDF is unlocked with the password typed in at upload. The password is
-   not stored.
+2. **Read on the phone.** pdf.js turns the PDF into lines of text with each item's position, in the browser.
+   Only that text is sent to the server; the PDF itself is never uploaded. A password-protected PDF asks for
+   its password, which is used on the phone and never sent.
 3. **Read and preview.** The statement reader for that bank lists the transactions it found with the
    statement's opening and closing balance. The import is refused if the transactions do not add up to the
    difference between the two, so a misread line is caught before anything is saved.
@@ -463,11 +466,13 @@ Budgeteer too. A separate Afrihost hosting account removes this link if it becom
 | Playwright | Review inbox, splitting, recurring payments, owed to me, budgets in Chromium at 390 px | `scripts/e2e.sh` |
 | `composer audit` | Known security advisories in dependencies | `composer audit` |
 
-`composer check` runs the first three. **GitHub Actions** runs Pint, Larastan, Pest on MySQL 8 and
-`composer audit` on every push and pull request.
+`composer check` runs Pint and Pest. **GitHub Actions** runs Pint, Pest on MySQL 8 and `composer audit` on
+every push and pull request. Larastan is not installed yet: the development sandbox cannot download
+`phpstan/phpstan` (it is published only as a GitHub zip, and GitHub's download host is blocked there), so it
+is added once that host is allowed.
 
 **Development environment:** Claude Code on the web. `.claude/hooks/session-start.sh` installs MariaDB, creates
-the three databases, installs Composer and npm packages and prepares `.env`, as in Bowls Buddy. Gmail is faked
+the three databases, installs Composer packages and prepares `.env` with the development sign-in switched on. Gmail is faked
 in tests; no real mailbox is read during development.
 
 ---

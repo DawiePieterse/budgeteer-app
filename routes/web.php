@@ -1,0 +1,39 @@
+<?php
+
+use App\Http\Controllers\Auth\DevLoginController;
+use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\CategoriseController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\StatementController;
+use App\Http\Controllers\TransactionController;
+use App\Models\User;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', fn () => view('login', [
+        'devUsers' => app()->isLocal() && config('budgeteer.dev_login') ? User::all() : collect(),
+    ]))->name('login');
+    Route::get('/auth/google', [GoogleController::class, 'redirect'])->middleware('throttle:10,1')->name('google.redirect');
+    Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->middleware('throttle:10,1')->name('google.callback');
+    Route::post('/dev-login/{user}', DevLoginController::class)->name('dev-login');
+});
+
+Route::middleware(['auth', 'throttle:120,1'])->group(function () {
+    Route::get('/', HomeController::class)->name('home');
+    Route::post('/logout', [GoogleController::class, 'logout'])->name('logout');
+
+    Route::get('/statements', [StatementController::class, 'index'])->name('statements.index');
+    Route::post('/statements/preview', [StatementController::class, 'preview'])->middleware('throttle:20,1')->name('statements.preview');
+    Route::post('/statements', [StatementController::class, 'store'])->name('statements.store');
+
+    Route::get('/categorise', [CategoriseController::class, 'index'])->name('categorise');
+    Route::post('/categorise', [CategoriseController::class, 'store'])->name('categorise.store');
+
+    Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
+    Route::get('/transactions/{transaction}', [TransactionController::class, 'edit'])->name('transactions.edit');
+    Route::post('/transactions/{transaction}', [TransactionController::class, 'update'])->name('transactions.update');
+
+    Route::get('/settings', [SettingsController::class, 'edit'])->name('settings');
+    Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
+});

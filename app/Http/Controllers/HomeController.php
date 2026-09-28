@@ -1,0 +1,53 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Enums\CategoryKind;
+use App\Models\Account;
+use App\Models\Category;
+use App\Models\Transaction;
+use App\Services\BudgetPeriod;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class HomeController extends Controller
+{
+    public function __invoke(Request $request): View
+    {
+        $household = $request->user()->household;
+        $date = $request->date('in') ? CarbonImmutable::parse($request->date('in')) : CarbonImmutable::today();
+        $period = BudgetPeriod::containing($date, $household->period_start_day);
+
+        $rows = Transaction::query()
+            ->where('is_transfer', false)
+            ->whereBetween('posted_on', [$period->from, $period->to])
+            ->get(['category_id', 'amount_cents']);
+
+        $categories = Category::query()->get()->keyBy('id');
+        $spending = [];
+        $income = [];
+        // Not yet categorised money in and money out are kept apart, so neither hides the other.
+        foreach ($rows->groupBy(fn (Transaction $t) => $t->category_id ?? ($t->amount_cents > 0 ? 'in' : 'out')) as $categoryId => $group) {
+            $sum = (int) $group->sum('amount_cents');
+            $category = $categories->get($categoryId);
+            if ($category?->kind === CategoryKind::Income || $categoryId === 'in') {
+                $income[] = ['name' => $category->name ?? 'Not categorised yet', 'cents' => $sum];
+            } else {
+                $spending[] = ['name' => $category->name ?? 'Not categorised yet', 'cents' => -$sum];
+            }
+        }
+        usort($spending, fn ($a, $b) => $b['cents'] <=> $a['cents']);
+        usort($income, fn ($a, $b) => $b['cents'] <=> $a['cents']);
+
+        return view('home', [
+            'period' => $period,
+            'spending' => $spending,
+            'income' => $income,
+            'spent' => array_sum(array_column($spending, 'cents')),
+            'received' => array_sum(array_column($income, 'cents')),
+            'toCategorise' => Transaction::query()->whereNull('category_id')->where('is_transfer', false)->count(),
+            'accounts' => Account::query()->orderBy('bank')->get(),
+        ]);
+    }
+}

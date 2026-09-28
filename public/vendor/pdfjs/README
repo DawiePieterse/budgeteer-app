@@ -1,0 +1,2 @@
+pdf.js 4.10.38 (Mozilla, Apache-2.0), legacy build from the pdfjs-dist npm package.
+Used by public/js/statement-upload.js to read statement PDFs in the browser.
