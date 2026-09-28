@@ -52,7 +52,7 @@ large and mostly unused here.
 |---|---|
 | `app/Models` | `Household`, `User`, `GmailConnection`, `IngestedEmail`, `Account`, `Transaction`, `TransactionSplit`, `Category`, `Budget`, `Rule`, `Merchant`, `Person`, `Receivable`, `Settlement`, `RecurringPayment`, `RecurringOccurrence` |
 | `app/Services/Gmail` | OAuth tokens, `history.list` sync, message fetch |
-| `app/Parsers` | One parser per bank or card sender (for example `FnbParser`), plus `ClaudeParser` as the fallback |
+| `app/Parsers` | One parser per bank or card sender (`DiscoveryBankParser`, `StandardBankParser`), plus `ClaudeParser` as the fallback |
 | `app/Services` | Merchant clean-up, categorising, learning, budget periods, recurring payments, reimbursements, payment matching |
 | `app/Filament` | Settings pages and resources |
 | `app/Http/Controllers` | Phone screens: home, review inbox, transactions, recurring payments, owed to me |
@@ -97,19 +97,31 @@ Queued work uses Laravel's `database` queue, drained by the scheduler with
 
 ### Banks
 
-The household starts with two banks, both emailing the same Gmail. Every bank is
-handled the same way, so adding one is a code change of a known size:
+The household starts with two banks, both emailing the same Gmail:
+
+| Bank | Account | Parser | Notifications to read |
+|---|---|---|---|
+| Discovery Bank | Credit card (main and any secondary cards) | `DiscoveryBankParser` | Card purchases, refunds, declined purchases (ignored), repayments received |
+| Standard Bank | Cheque account | `StandardBankParser` | Card purchases, debit orders, EFTs and transfers out, payments in (salary, reimbursements) |
+
+**Transfers between your own accounts** do not count as spending. The monthly repayment of the Discovery
+credit card from the Standard Bank cheque account shows up twice: as a payment out at Standard Bank and a
+payment received at Discovery Bank. The two are matched on amount and date (within 3 days) and marked as a
+transfer, which leaves the budget untouched; the purchases on the card are what count. A repayment that
+cannot be matched goes to the review inbox.
+
+Every bank is handled the same way, so adding a third later is a code change of a known size:
 
 1. Add its sender addresses to the `Budgeteer` Gmail filter.
-2. Add a parser in `app/Parsers` (for example `FnbParser`, and one for the second bank) and register its
-   senders in `email_sources`.
+2. Add a parser in `app/Parsers` and register its senders in `email_sources`.
 3. Add redacted sample emails for every notification type the bank sends (purchase, refund, payment received,
    debit order, transfer) to `tests/Fixtures/emails/<bank>` with a Pest test for each.
 4. Cards and accounts at the new bank are created the first time a parsed email names a new number ending,
    and are confirmed in the review inbox, with who uses each card (see "Who spent it" in section 6).
 
-Banks do not all email every kind of transaction; some only send debit orders by SMS or in the app. Before
-writing a parser, check a month of that bank's emails to see what arrives. Anything a bank does not email is
+Banks do not all email every kind of transaction; some send most alerts only by SMS or app notification.
+Before writing a parser, switch on email notifications in the Discovery Bank app and in Standard Bank's
+notification settings (where offered), then check a month of each bank's emails to see what arrives. Anything a bank does not email is
 covered by recurring payments marked paid by hand (section 7) or by manual entry.
 
 ---
@@ -168,7 +180,7 @@ subscriptions) are set up once, so the budget knows about them before they go of
 | Field | Example |
 |---|---|
 | Name and category | Medical aid, Medical |
-| Match text | Payee or debit order reference as it appears in the bank email, for example `DISCOVERY` |
+| Match text | Payee or debit order reference as it appears in the bank email, for example `DISCOVERY HEALTH` |
 | Expected amount and tolerance | R4,500, within R50 or 2% |
 | Day of the month | 1st (matched from 3 days before to 5 days after) |
 | Account | The account it is paid from; optional |
