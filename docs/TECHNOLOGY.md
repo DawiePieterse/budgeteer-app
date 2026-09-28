@@ -173,8 +173,9 @@ Each step runs only if the one before did not decide:
 
 ### A card kept for someone else
 
-Dewan has his own Discovery credit card, and its notifications come to the same Gmail. His spending must
-not count against the household budget, but what he owes has to be visible on its own.
+Dewan has his own Discovery credit card, and its notifications come to the same Gmail. The household pays
+his card from the Standard Bank cheque account and Dewan pays the household back. His spending must not
+count against the household budget, but what he owes has to be visible on its own.
 
 - **Card setting "Charge to a person".** Dewan's card, recognised by its number ending, is set to charge
   to the person Dewan. Every transaction on it goes straight to his receivables, in full, and never
