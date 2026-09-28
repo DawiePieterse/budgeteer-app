@@ -341,6 +341,27 @@ transactions, and every line's amount matched the change in the running balance.
 
 A made-up statement in the same layout is the Pest fixture for `DiscoveryBankStatement`.
 
+### Discovery Bank notification email (checked against a real email)
+
+Subject `Transaction update — <date> <time>`, from Discovery Bank, one transaction per email. The body is a
+list of short lines, which `DiscoveryBankParser` reads in order:
+
+| Line | Example (invented values) | Stored as |
+|---|---|---|
+| Heading | `Card payment` | Type (purchase; other headings for refunds, payments received and declines) |
+| Merchant and amount | `Checkers Sixty60 Cape To – R 469.88` | Merchant (the name is cut short, as on the statement) and amount |
+| Account | `From ***1234` | Account, by the account number ending |
+| Cardholder | `Jane Doe` | Who used the card |
+| Card | `Card ending ***5678` | Card, by number ending |
+| Date and time | `Sunday, 27 September at 16:19` | Transaction time; the year comes from the subject |
+| Available balance | `Available balance: R 165,371.88` | Kept on the account as its latest available balance (balance plus credit limit) |
+
+- The email names both the cardholder and the card, so Dewan's purchases are recognised as his from the
+  email alone, as section 6 needs.
+- A purchase is emailed straight away but appears on the statement a day or two later, sometimes under the
+  next statement's period. Matching a statement line to an email allows a few days either way, as
+  section 8 describes.
+
 **Later:** statements arrive by email, so they could be read from Gmail automatically like notifications.
 The Standard Bank statement needs no password, so it can be read from Gmail once uploading works; a bank
 whose statements need a password (possibly an ID number) stays manual rather than storing it. Statement files are not kept once they have been read.
