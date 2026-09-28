@@ -21,10 +21,14 @@ emails. Built with Laravel 12 for the Afrihost hosting that runs Bowls Buddy. Th
 - **Bank emails:** link the Gmail that receives the bank notifications (read-only, only emails labelled
   `Budgeteer`); every 5 minutes new Discovery Bank emails become transactions with their card and cardholder,
   and a purchase that is both emailed and on a statement is counted once.
+- **Cards charged to someone:** set a card (for example Dewan's) to "Charge to …" and everything on it is
+  owed to you instead of counted in the budget. Their page shows what they owe (from an opening balance you
+  type in), what they bought, repayments, and a WhatsApp reminder; payments into your accounts that mention
+  them are offered as repayments with one tap.
 - **Settings:** household name, the day the budget month starts, the names on payments between your own
   accounts, and account names.
 
-Next: cards and Dewan's page, recurring payments, budgets per category, Standard Bank emails.
+Next: recurring payments, budgets per category, Standard Bank emails.
 
 ## Running it locally
 

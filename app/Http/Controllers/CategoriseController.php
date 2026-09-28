@@ -24,6 +24,7 @@ class CategoriseController extends Controller
         $groups = Transaction::query()
             ->whereNull('category_id')
             ->where('is_transfer', false)
+            ->whereNull('person_id')
             ->selectRaw('merchant_key, amount_cents > 0 as money_in, count(*) as n, sum(amount_cents) as total, min(posted_on) as first_on, max(posted_on) as last_on, min(description) as example')
             ->groupBy('merchant_key', 'money_in')
             ->orderByRaw('abs(sum(amount_cents)) desc')
@@ -32,7 +33,7 @@ class CategoriseController extends Controller
 
         return view('categorise', [
             'groups' => $groups,
-            'remaining' => Transaction::query()->whereNull('category_id')->where('is_transfer', false)->count(),
+            'remaining' => Transaction::query()->whereNull('category_id')->where('is_transfer', false)->whereNull('person_id')->count(),
             'categories' => Category::query()->orderBy('kind')->orderBy('sort')->get()->groupBy(fn (Category $c) => $c->kind->value),
         ]);
     }
@@ -48,6 +49,7 @@ class CategoriseController extends Controller
         $transactions = Transaction::query()
             ->whereNull('category_id')
             ->where('is_transfer', false)
+            ->whereNull('person_id')
             ->where('merchant_key', $data['merchant_key'])
             ->where('amount_cents', $data['money_in'] ? '>' : '<=', 0);
 

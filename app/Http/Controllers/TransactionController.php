@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\Category;
+use App\Models\Person;
 use App\Models\Transaction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,7 @@ class TransactionController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Transaction::query()->with(['account', 'category'])->orderByDesc('posted_on')->orderByDesc('id');
+        $query = Transaction::query()->with(['account', 'category', 'person'])->orderByDesc('posted_on')->orderByDesc('id');
         if ($request->filled('account')) {
             $query->where('account_id', $request->integer('account'));
         }
@@ -33,6 +34,7 @@ class TransactionController extends Controller
         return view('transactions.edit', [
             'transaction' => $transaction,
             'categories' => Category::query()->orderBy('kind')->orderBy('sort')->get()->groupBy(fn (Category $c) => $c->kind->value),
+            'people' => Person::query()->orderBy('name')->get(),
         ]);
     }
 
@@ -41,11 +43,13 @@ class TransactionController extends Controller
         $data = $request->validate([
             'category_id' => ['nullable', Rule::in(Category::query()->pluck('id')->all())],
             'is_transfer' => ['boolean'],
+            'person_id' => ['nullable', Rule::in(Person::query()->pluck('id')->all())],
         ]);
         $isTransfer = (bool) ($data['is_transfer'] ?? false);
         $transaction->update([
             'category_id' => $isTransfer ? null : ($data['category_id'] ?? null),
             'is_transfer' => $isTransfer,
+            'person_id' => $isTransfer || $transaction->settlement()->exists() ? $transaction->person_id : ($data['person_id'] ?? null),
             'updated_by' => $request->user()->id,
         ]);
 

@@ -25,7 +25,7 @@
                     {{ $t->description }}
                     <span class="muted small block">
                         {{ $t->posted_on->format('j M Y') }} · {{ $t->account->name }} ·
-                        @if ($t->is_transfer) Own accounts @else {{ $t->category->name ?? 'Not categorised' }} @endif
+                        @if ($t->is_transfer) Own accounts @elseif ($t->person) {{ $t->person->name }} @else {{ $t->category->name ?? 'Not categorised' }} @endif
                     </span>
                 </span>
                 <span @class(['amount', 'in' => $t->amount_cents > 0, 'muted' => $t->is_transfer])>{{ money($t->amount_cents) }}</span>

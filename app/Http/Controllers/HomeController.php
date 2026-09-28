@@ -5,15 +5,17 @@ namespace App\Http\Controllers;
 use App\Enums\CategoryKind;
 use App\Models\Account;
 use App\Models\Category;
+use App\Models\Person;
 use App\Models\Transaction;
 use App\Services\BudgetPeriod;
+use App\Services\PersonBalance;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class HomeController extends Controller
 {
-    public function __invoke(Request $request): View
+    public function __invoke(Request $request, PersonBalance $balances): View
     {
         $household = $request->user()->household;
         $date = $request->date('in') ? CarbonImmutable::parse($request->date('in')) : CarbonImmutable::today();
@@ -21,6 +23,7 @@ class HomeController extends Controller
 
         $rows = Transaction::query()
             ->where('is_transfer', false)
+            ->whereNull('person_id')
             ->whereBetween('posted_on', [$period->from, $period->to])
             ->get(['category_id', 'amount_cents']);
 
@@ -46,7 +49,8 @@ class HomeController extends Controller
             'income' => $income,
             'spent' => array_sum(array_column($spending, 'cents')),
             'received' => array_sum(array_column($income, 'cents')),
-            'toCategorise' => Transaction::query()->whereNull('category_id')->where('is_transfer', false)->count(),
+            'toCategorise' => Transaction::query()->whereNull('category_id')->where('is_transfer', false)->whereNull('person_id')->count(),
+            'owedToUs' => Person::query()->orderBy('name')->get()->map(fn (Person $p) => ['person' => $p, 'cents' => $balances->owed($p)]),
             'accounts' => Account::query()->orderBy('bank')->get(),
         ]);
     }

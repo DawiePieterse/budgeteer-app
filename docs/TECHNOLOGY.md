@@ -184,6 +184,14 @@ Each step runs only if the one before did not decide:
 
 ### A card kept for someone else
 
+*Built:* a card's owner is set in Settings → Cards. Transactions on it get `person_id` and leave the budget
+and the categorise list. What the person owes is `opening_balance_cents` (as of `opening_balance_on`) plus
+their transactions after that date, less `settlements`. Transactions from before the opening date leave the
+budget but are not added again, because the opening balance already includes them. A payment into an own
+account whose description contains the person's `payment_reference` is offered as a repayment; confirming it
+creates a settlement linked to that transaction and takes it out of household income. There is no separate
+`receivables` table: the charged transactions are the receivables.
+
 Dewan has an extra card on the household's Discovery credit card account, with its own card number, and
 its notifications come to the same Gmail. His purchases are paid off with the rest of the account, and Dewan
 pays the household back. His spending must not

@@ -39,6 +39,18 @@
         </section>
     @endif
 
+    @if ($owedToUs->isNotEmpty())
+        <section class="card">
+            <h2>Owed to us</h2>
+            @foreach ($owedToUs as $row)
+                <a class="row" href="{{ route('people.show', $row['person']) }}">
+                    <span>{{ $row['person']->name }}</span>
+                    <span @class(['amount', 'out' => $row['cents'] > 0])>{{ money($row['cents']) }} ›</span>
+                </a>
+            @endforeach
+        </section>
+    @endif
+
     @if ($accounts->isNotEmpty())
         <section class="card">
             <h2>Accounts</h2>

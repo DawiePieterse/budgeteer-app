@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\Card;
 use App\Models\GmailConnection;
 use App\Models\IngestedEmail;
+use App\Models\Person;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,8 @@ class SettingsController extends Controller
             'accounts' => Account::query()->orderBy('bank')->get(),
             'users' => User::query()->where('household_id', $request->user()->household_id)->get(),
             'connections' => GmailConnection::query()->with('user')->get(),
-            'cards' => Card::query()->with('account')->orderBy('account_id')->orderBy('number_ending')->get(),
+            'people' => Person::query()->orderBy('name')->get(),
+            'cards' => Card::query()->with(['account', 'chargeToPerson'])->orderBy('account_id')->orderBy('number_ending')->get(),
             'emails' => IngestedEmail::query()->with('transaction')->latest('id')->limit(15)->get(),
         ]);
     }

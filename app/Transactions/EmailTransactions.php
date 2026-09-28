@@ -47,7 +47,7 @@ class EmailTransactions
 
         $existing = $this->statementLine($email, $account);
         if ($existing !== null) {
-            $existing->update(['card_id' => $card?->id, 'occurred_at' => $email->occurredAt]);
+            $existing->update(['card_id' => $card?->id, 'occurred_at' => $email->occurredAt, 'person_id' => $card?->charge_to_person_id]);
 
             return [$existing, true];
         }
@@ -69,6 +69,7 @@ class EmailTransactions
             'amount_cents' => $email->amountCents,
             'kind' => $email->kind,
             'category_id' => $categoryId,
+            'person_id' => $card?->charge_to_person_id,
         ]);
 
         return [$transaction, false];

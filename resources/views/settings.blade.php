@@ -85,11 +85,28 @@
     @if ($cards->isNotEmpty())
         <section class="card">
             <h2>Cards</h2>
+            <p class="muted small">A card charged to someone is kept out of the budget: what is bought on it is owed to you.</p>
             @foreach ($cards as $card)
-                <div class="row">
-                    <span>••{{ $card->number_ending }} <span class="muted small block">{{ $card->account->name }} ••{{ $card->account->number_ending }}</span></span>
-                    <span>{{ $card->holder_name ?? 'Main cardholder' }}</span>
-                </div>
+                <form method="POST" action="{{ route('cards.update', $card) }}" class="row">
+                    @csrf
+                    <span>
+                        ••{{ $card->number_ending }} · {{ $card->holder_name ?? 'Main cardholder' }}
+                        <span class="muted small block">{{ $card->account->name }} ••{{ $card->account->number_ending }}@if ($card->chargeToPerson) · <a href="{{ route('people.show', $card->chargeToPerson) }}">{{ $card->chargeToPerson->name }} owes</a>@endif</span>
+                    </span>
+                    <span class="inline actions">
+                        <label class="visually-hidden" for="owner-{{ $card->id }}">Whose spending</label>
+                        <select name="owner" id="owner-{{ $card->id }}">
+                            <option value="{{ \App\Http\Controllers\CardController::HOUSEHOLD }}" @selected($card->charge_to_person_id === null)>Our budget</option>
+                            @foreach ($people as $person)
+                                <option value="{{ $person->id }}" @selected($card->charge_to_person_id === $person->id)>Charge to {{ $person->name }}</option>
+                            @endforeach
+                            <option value="{{ \App\Http\Controllers\CardController::NEW_PERSON }}">Charge to someone new…</option>
+                        </select>
+                        <label class="visually-hidden" for="new-person-{{ $card->id }}">Name</label>
+                        <input type="text" name="new_person" id="new-person-{{ $card->id }}" placeholder="Name, if new" value="{{ $card->charge_to_person_id === null && $card->holder_name ? $card->holder_name : '' }}" maxlength="100">
+                        <button type="submit" class="secondary">Save</button>
+                    </span>
+                </form>
             @endforeach
         </section>
     @endif

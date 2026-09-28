@@ -9,6 +9,7 @@ use Database\Factories\TransactionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -26,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property string $currency
  * @property TransactionKind $kind
  * @property int|null $category_id
+ * @property int|null $person_id
  * @property bool $is_transfer
  * @property int|null $transfer_pair_id
  * @property int|null $balance_after_cents
@@ -39,7 +41,7 @@ class Transaction extends Model
 
     protected $fillable = [
         'household_id', 'account_id', 'card_id', 'source', 'statement_import_id', 'posted_on', 'occurred_at', 'description',
-        'bank_type', 'merchant_key', 'amount_cents', 'currency', 'kind', 'category_id', 'is_transfer',
+        'bank_type', 'merchant_key', 'amount_cents', 'currency', 'kind', 'category_id', 'person_id', 'is_transfer',
         'transfer_pair_id', 'balance_after_cents', 'line_on_statement', 'updated_by',
     ];
 
@@ -64,6 +66,18 @@ class Transaction extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /** @return BelongsTo<Person, $this> */
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class);
+    }
+
+    /** @return HasOne<Settlement, $this> */
+    public function settlement(): HasOne
+    {
+        return $this->hasOne(Settlement::class);
     }
 
     /** @return BelongsTo<Card, $this> */

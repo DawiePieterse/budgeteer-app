@@ -102,7 +102,7 @@ code { font-size: 0.9em; }
 
 label { display: block; margin: 0.75rem 0 0.25rem; font-weight: 600; font-size: 0.9rem; }
 label.check { display: flex; gap: 0.5rem; align-items: center; font-weight: 400; }
-input[type=text], input[type=number], input[type=password], input[type=search], select, textarea {
+input[type=text], input[type=number], input[type=password], input[type=search], input[type=date], select, textarea {
     width: 100%; padding: 0.6rem; border: 1px solid var(--line); border-radius: 8px;
     background: var(--bg); color: var(--text); font: inherit;
 }
@@ -134,5 +134,9 @@ details { margin-top: 1rem; }
 summary { cursor: pointer; color: var(--accent); }
 ol { padding-left: 1.2rem; }
 .inline form { display: inline; }
-.row .actions { flex-basis: 100%; justify-content: flex-start; gap: 1rem; }
+.row .actions { flex-basis: 100%; justify-content: flex-start; gap: 0.5rem 1rem; flex-wrap: wrap; }
 .row .actions button { margin-top: 0; }
+.row .actions select, .row .actions input { flex: 1 1 10rem; }
+.spaced { margin-top: 1.25rem; }
+.inline > span { flex: 1; min-width: 0; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; align-items: end; }

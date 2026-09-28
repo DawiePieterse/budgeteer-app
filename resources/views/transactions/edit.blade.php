@@ -25,6 +25,15 @@
                 </optgroup>
             @endforeach
         </select>
+        @if ($people->isNotEmpty())
+            <label for="person_id">Whose spending</label>
+            <select name="person_id" id="person_id">
+                <option value="">Ours (in the budget)</option>
+                @foreach ($people as $person)
+                    <option value="{{ $person->id }}" @selected($transaction->person_id === $person->id)>Charged to {{ $person->name }}</option>
+                @endforeach
+            </select>
+        @endif
         <label class="check">
             <input type="hidden" name="is_transfer" value="0">
             <input type="checkbox" name="is_transfer" value="1" @checked($transaction->is_transfer)>

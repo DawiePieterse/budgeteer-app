@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\Auth\DevLoginController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\CardController;
 use App\Http\Controllers\CategoriseController;
 use App\Http\Controllers\GmailController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PersonController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StatementController;
 use App\Http\Controllers\TransactionController;
@@ -41,6 +43,14 @@ Route::middleware(['auth', 'throttle:120,1'])->group(function () {
     Route::get('/gmail/callback', [GmailController::class, 'callback'])->middleware('throttle:10,1')->name('gmail.callback');
     Route::post('/gmail/{connection}/sync', [GmailController::class, 'sync'])->middleware('throttle:10,1')->name('gmail.sync');
     Route::post('/gmail/{connection}/delete', [GmailController::class, 'destroy'])->name('gmail.destroy');
+
+    Route::post('/cards/{card}', [CardController::class, 'update'])->name('cards.update');
+
+    Route::get('/people/{person}', [PersonController::class, 'show'])->name('people.show');
+    Route::post('/people/{person}', [PersonController::class, 'update'])->name('people.update');
+    Route::post('/people/{person}/settlements', [PersonController::class, 'storeSettlement'])->name('people.settlements.store');
+    Route::post('/people/{person}/settlements/from/{transaction}', [PersonController::class, 'settleFromTransaction'])->name('people.settlements.from');
+    Route::post('/people/{person}/settlements/{settlement}/delete', [PersonController::class, 'destroySettlement'])->name('people.settlements.destroy');
 
     Route::get('/settings', [SettingsController::class, 'edit'])->name('settings');
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
