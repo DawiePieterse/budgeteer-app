@@ -48,6 +48,8 @@ class StatementController extends Controller
             'account' => $importer->existingAccount($statement, $household),
             'alreadyImported' => $importer->alreadyImported($statement, $household),
             'alreadyThere' => $importer->countAlreadyThere($statement, $household),
+            'tooOld' => $household->keep_from === null ? 0 : count(array_filter($statement->lines, fn ($l) => $l->date->lessThan($household->keep_from))),
+            'keepFrom' => $household->keep_from,
         ]);
     }
 

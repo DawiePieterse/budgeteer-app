@@ -253,3 +253,19 @@ it('reads again emails it could not read before', function () {
     expect(IngestedEmail::withoutGlobalScopes()->sole()->status)->toBe('added')
         ->and(Transaction::withoutGlobalScopes()->count())->toBe(1);
 });
+
+it('skips bank emails from before the day the household keeps data from', function () {
+    $user = member();
+    $user->household->update(['keep_from' => '2026-09-27']);
+    $connection = linkedGmail($user);
+    fakeGmail([
+        'old' => gmailMessage('old', 'card-payment-main-card', 'Transaction update — 26 Sep 2026 18:36:00'),
+        'new' => gmailMessage('new', 'card-payment-extra-card', 'Transaction update — 27 Sep 2026 16:19:14'),
+    ]);
+
+    app(GmailSync::class)->sync($connection);
+
+    expect(IngestedEmail::withoutGlobalScopes()->orderBy('gmail_message_id')->pluck('status', 'gmail_message_id')->all())
+        ->toBe(['new' => 'added', 'old' => 'ignored'])
+        ->and(Transaction::withoutGlobalScopes()->count())->toBe(1);
+});

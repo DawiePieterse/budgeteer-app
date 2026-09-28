@@ -14,6 +14,9 @@
         <div class="row"><span>Money in</span><span class="amount in">{{ money($statement->moneyInCents()) }}</span></div>
         <div class="row"><span>Closing balance</span><span class="amount">{{ money($statement->closingCents) }}</span></div>
         <p class="notice ok small">All {{ count($statement->lines) }} transactions add up to the closing balance.</p>
+        @if ($tooOld > 0)
+            <p class="muted small">{{ $tooOld }} are dated before {{ $keepFrom->format('j F Y') }}, which Budgeteer does not keep, and will be skipped.</p>
+        @endif
         @if ($alreadyThere > 0)
             <p class="muted small">{{ $alreadyThere }} of them are already in Budgeteer from an earlier statement and will be skipped.</p>
         @endif
@@ -25,7 +28,7 @@
     @else
         <form method="POST" action="{{ route('statements.store') }}">
             @csrf
-            <button type="submit">Import {{ count($statement->lines) - $alreadyThere }} transactions</button>
+            <button type="submit">Import {{ max(0, count($statement->lines) - $alreadyThere - $tooOld) }} transactions</button>
         </form>
         <a class="button secondary" href="{{ route('statements.index') }}">Cancel</a>
     @endif

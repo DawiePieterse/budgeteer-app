@@ -15,6 +15,10 @@
             <label for="period_start_day">Budget month starts on day</label>
             <input type="number" name="period_start_day" id="period_start_day" min="1" max="28" value="{{ old('period_start_day', $household->period_start_day) }}" required>
 
+            @if ($household->keep_from)
+                <p class="muted small">Budgeteer keeps data from {{ $household->keep_from->format('j F Y') }}; anything older is skipped.</p>
+            @endif
+
             <label for="own_account_names">Names on payments between your own accounts</label>
             <textarea name="own_account_names" id="own_account_names" rows="3" placeholder="J SMITH">{{ old('own_account_names', $household->own_account_names) }}</textarea>
             <p class="muted small">One per line, as the bank shows it. A payment whose description starts with one of these (for example the credit card repayment) is moved money, not spending or income. Applies to statements imported from now on.</p>

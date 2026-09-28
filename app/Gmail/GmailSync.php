@@ -7,6 +7,7 @@ use App\Gmail\Parsers\EmailNotUnderstood;
 use App\Gmail\Parsers\EmailParser;
 use App\Gmail\Parsers\EmailToIgnore;
 use App\Models\GmailConnection;
+use App\Models\Household;
 use App\Models\IngestedEmail;
 use App\Transactions\EmailTransactions;
 use App\Transactions\TransferPairer;
@@ -148,7 +149,12 @@ class GmailSync
 
         try {
             return DB::transaction(function () use ($parser, $message, $connection, $record) {
-                [$transaction, $wasThere] = $this->transactions->record($parser->parse($message), $connection->household_id);
+                $parsed = $parser->parse($message);
+                $keepFrom = Household::query()->whereKey($connection->household_id)->value('keep_from');
+                if ($keepFrom !== null && $parsed->occurredAt->toDateString() < substr((string) $keepFrom, 0, 10)) {
+                    throw new EmailToIgnore('Before the date Budgeteer keeps data from.');
+                }
+                [$transaction, $wasThere] = $this->transactions->record($parsed, $connection->household_id);
                 $status = $wasThere ? IngestedEmail::MATCHED : IngestedEmail::ADDED;
                 IngestedEmail::create($record + ['status' => $status, 'transaction_id' => $transaction->id]);
 

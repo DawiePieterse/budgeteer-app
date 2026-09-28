@@ -128,6 +128,15 @@ $PHP artisan migrate --force
 $PHP artisan config:cache && $PHP artisan route:cache && $PHP artisan view:cache
 ```
 
+## Keeping data only from a date
+
+```sh
+$PHP artisan budgeteer:keep-from 2026-07-01
+```
+
+Shows how many transactions and repayments are dated before that day, and deletes them after you confirm.
+From then on, statement lines and bank emails dated before it are skipped.
+
 ## If something goes wrong
 
 - **Error page with no detail:** look at `~/budgeteer/storage/logs/laravel.log`.

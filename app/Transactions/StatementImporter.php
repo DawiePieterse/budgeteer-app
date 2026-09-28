@@ -81,6 +81,12 @@ class StatementImporter
             ]);
 
             $new = $this->newLines($statement, $account);
+            $tooOld = 0;
+            if ($household->keep_from !== null) {
+                $kept = array_values(array_filter($new, fn (StatementLine $l) => $l->date->greaterThanOrEqualTo($household->keep_from)));
+                $tooOld = count($new) - count($kept);
+                $new = $kept;
+            }
             $import = StatementImport::create([
                 'household_id' => $household->id,
                 'account_id' => $account->id,
@@ -91,7 +97,7 @@ class StatementImporter
                 'closing_cents' => $statement->closingCents,
                 'lines' => count($statement->lines),
                 'added' => count($new),
-                'already_there' => count($statement->lines) - count($new),
+                'already_there' => count($statement->lines) - count($new) - $tooOld,
                 'fingerprint' => $statement->fingerprint(),
             ]);
 
