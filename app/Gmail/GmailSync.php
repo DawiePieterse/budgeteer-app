@@ -11,6 +11,7 @@ use App\Models\Household;
 use App\Models\IngestedEmail;
 use App\Transactions\EmailTransactions;
 use App\Transactions\TransferPairer;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -90,6 +91,49 @@ class GmailSync
                 'last_error' => mb_substr($e->getMessage(), 0, 500),
                 'last_synced_at' => now(),
             ]);
+            $counts['finished'] = false;
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Reads every labelled email since a day that has not been read yet, for example to fill in the
+     * months before Gmail was linked. The normal sync position is left alone.
+     *
+     * @return array{added: int, matched: int, other: int, finished: bool}
+     */
+    public function readSince(GmailConnection $connection, CarbonInterface $since, int $seconds = 600): array
+    {
+        $deadline = microtime(true) + $seconds;
+        $counts = ['added' => 0, 'matched' => 0, 'other' => 0, 'finished' => true];
+
+        try {
+            $labelId = $connection->label_id ?? $this->gmail->labelId($connection, GmailConnection::LABEL);
+            if ($labelId === null) {
+                $connection->update(['status' => GmailConnection::LABEL_MISSING]);
+
+                return $counts;
+            }
+            $ids = array_reverse($this->gmail->messageIds($connection, $labelId, 'after:'.$since->format('Y/m/d'), 2000));
+            $seen = IngestedEmail::withoutGlobalScopes()->where('gmail_connection_id', $connection->id)->pluck('gmail_message_id')->all();
+            foreach (array_diff($ids, $seen) as $id) {
+                if (microtime(true) > $deadline) {
+                    $counts['finished'] = false;
+                    break;
+                }
+                $message = $this->gmail->message($connection, $id);
+                if ($message === null) {
+                    continue;
+                }
+                $status = $this->ingest($connection, $message);
+                $counts[match ($status) {
+                    IngestedEmail::ADDED => 'added', IngestedEmail::MATCHED => 'matched', default => 'other'
+                }]++;
+            }
+            $this->pairer->pair($connection->household_id);
+        } catch (GmailException $e) {
+            $connection->update(['status' => $e->needsRelink ? GmailConnection::NEEDS_RELINK : GmailConnection::ERROR, 'last_error' => mb_substr($e->getMessage(), 0, 500)]);
             $counts['finished'] = false;
         }
 

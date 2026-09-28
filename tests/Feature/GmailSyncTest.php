@@ -269,3 +269,17 @@ it('skips bank emails from before the day the household keeps data from', functi
         ->toBe(['new' => 'added', 'old' => 'ignored'])
         ->and(Transaction::withoutGlobalScopes()->count())->toBe(1);
 });
+
+it('reads older labelled emails from a chosen day, and lists what was not read', function () {
+    $connection = linkedGmail(member());
+    fakeGmail([
+        'a' => gmailMessage('a', 'card-payment-extra-card', 'Transaction update — 27 Jul 2026 16:19:14'),
+        'y' => gmailMessage('y', 'card-payment-main-card', 'Your statement is ready'),
+    ]);
+
+    $this->artisan('budgeteer:gmail-sync --since=2026-07-01 --seconds=0')->assertSuccessful();
+
+    expect(Transaction::withoutGlobalScopes()->count())->toBe(1);
+    Http::assertSent(fn (Request $r) => str_contains(urldecode($r->url()), 'q=after:2026/07/01'));
+    $this->artisan('budgeteer:gmail-sync --list-unread')->expectsOutputToContain('Your statement is ready')->assertSuccessful();
+});
