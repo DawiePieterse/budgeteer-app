@@ -65,6 +65,11 @@ class StatementController extends Controller
             return redirect()->route('statements.index')->with('error', $e->getMessage());
         }
 
-        return redirect()->route('categorise')->with('status', "Imported {$import->added} transactions".($import->already_there > 0 ? " ({$import->already_there} were already there)." : '.'));
+        $notes = array_filter([
+            $import->matched_emails > 0 ? "{$import->matched_emails} already read from bank emails" : null,
+            $import->already_there > 0 ? "{$import->already_there} already there from an earlier statement" : null,
+        ]);
+
+        return redirect()->route('categorise')->with('status', "Imported {$import->added} transactions".($notes ? ' ('.implode('; ', $notes).').' : '.'));
     }
 }

@@ -38,7 +38,7 @@ class Transaction extends Model
     use BelongsToHousehold, HasFactory;
 
     protected $fillable = [
-        'household_id', 'account_id', 'card_id', 'source', 'statement_import_id', 'posted_on', 'description',
+        'household_id', 'account_id', 'card_id', 'source', 'statement_import_id', 'posted_on', 'occurred_at', 'description',
         'bank_type', 'merchant_key', 'amount_cents', 'currency', 'kind', 'category_id', 'is_transfer',
         'transfer_pair_id', 'balance_after_cents', 'line_on_statement', 'updated_by',
     ];
@@ -49,6 +49,7 @@ class Transaction extends Model
             'source' => TransactionSource::class,
             'kind' => TransactionKind::class,
             'posted_on' => 'date',
+            'occurred_at' => 'datetime',
             'is_transfer' => 'boolean',
         ];
     }

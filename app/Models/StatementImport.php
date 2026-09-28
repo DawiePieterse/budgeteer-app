@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property int $lines
  * @property int $added
  * @property int $already_there
+ * @property int $matched_emails
  * @property string $fingerprint
  * @property Carbon $created_at
  */
@@ -26,7 +27,7 @@ class StatementImport extends Model
 {
     use BelongsToHousehold;
 
-    protected $fillable = ['household_id', 'account_id', 'user_id', 'period_from', 'period_to', 'opening_cents', 'closing_cents', 'lines', 'added', 'already_there', 'fingerprint'];
+    protected $fillable = ['household_id', 'account_id', 'user_id', 'period_from', 'period_to', 'opening_cents', 'closing_cents', 'lines', 'added', 'already_there', 'matched_emails', 'fingerprint'];
 
     protected function casts(): array
     {

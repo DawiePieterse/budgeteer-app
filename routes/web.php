@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\DevLoginController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\CategoriseController;
+use App\Http\Controllers\GmailController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StatementController;
@@ -35,6 +36,11 @@ Route::middleware(['auth', 'throttle:120,1'])->group(function () {
     Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
     Route::get('/transactions/{transaction}', [TransactionController::class, 'edit'])->name('transactions.edit');
     Route::post('/transactions/{transaction}', [TransactionController::class, 'update'])->name('transactions.update');
+
+    Route::get('/gmail/link', [GmailController::class, 'link'])->middleware('throttle:10,1')->name('gmail.link');
+    Route::get('/gmail/callback', [GmailController::class, 'callback'])->middleware('throttle:10,1')->name('gmail.callback');
+    Route::post('/gmail/{connection}/sync', [GmailController::class, 'sync'])->middleware('throttle:10,1')->name('gmail.sync');
+    Route::post('/gmail/{connection}/delete', [GmailController::class, 'destroy'])->name('gmail.destroy');
 
     Route::get('/settings', [SettingsController::class, 'edit'])->name('settings');
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');

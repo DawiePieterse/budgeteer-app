@@ -18,10 +18,13 @@ emails. Built with Laravel 12 for the Afrihost hosting that runs Bowls Buddy. Th
   choice categorises the whole group and is remembered for the next statement.
 - **Home:** money in, spending by category and account balances for the budget period.
 - **Transactions:** search, filter by account, change a category or mark as a transfer.
+- **Bank emails:** link the Gmail that receives the bank notifications (read-only, only emails labelled
+  `Budgeteer`); every 5 minutes new Discovery Bank emails become transactions with their card and cardholder,
+  and a purchase that is both emailed and on a statement is counted once.
 - **Settings:** household name, the day the budget month starts, the names on payments between your own
   accounts, and account names.
 
-Next: Gmail sync and email parsers, cards and Dewan's page, recurring payments, budgets per category.
+Next: cards and Dewan's page, recurring payments, budgets per category, Standard Bank emails.
 
 ## Running it locally
 

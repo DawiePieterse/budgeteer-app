@@ -83,13 +83,20 @@ large and mostly unused here.
 1. **Gmail filter.** The bank emails arrive in one person's Gmail. That person adds a Gmail filter that labels
    bank and card notifications `Budgeteer`, and links that Gmail once. The app only lists messages with that
    label.
-2. **Sync (every 5 minutes).** A scheduled job calls Gmail `history.list` from the last stored history ID for
-   the linked account and queues new message IDs. The first link does a full `messages.list` of the label.
-3. **Parse.** Each message is fetched, matched to a parser by sender, and turned into amount, date, merchant,
-   card number ending, and type (purchase, refund, payment received). No match goes to the Claude fallback if
-   it is on, otherwise to the review inbox as "could not read".
-4. **De-duplicate.** Unique on Gmail message ID, plus a hash of amount, date, merchant and card to catch the
-   same purchase notified twice.
+2. **Sync (every 5 minutes).** `budgeteer:gmail-sync` (scheduled, `withoutOverlapping`) calls Gmail
+   `history.list` from the last stored history ID, limited to the label. The first sync lists the label's
+   messages from the last 30 days; linking Gmail runs a first sync straight away. Each run is time-boxed
+   (40 seconds from cron, 20 from the "Check now" button); the history position only moves on once every
+   message up to it is handled, so a run cut short simply continues next time. Messages are handled
+   directly, without the queue.
+3. **Parse.** Each message is fetched, matched to a parser by sender and subject (`DiscoveryEmailParser`), and
+   turned into amount, date and time, merchant, account and card number endings, cardholder and kind
+   (purchase, refund, cash, money in). Declined purchases are skipped. An email that is not understood is
+   logged as "Not read" with the reason, visible under Settings → Latest bank emails.
+4. **De-duplicate.** Every email is recorded once in `ingested_emails` by Gmail message ID. A purchase that is
+   both emailed and on a statement is one transaction: whichever arrives second is matched to the first on
+   account, exact amount and date (the statement may be up to 4 days later), never on the merchant name. The
+   statement's wording then replaces the email's, so later overlapping statements recognise the line.
 5. **Match recurring payments.** A debit order or other payment that matches an expected recurring payment
    (section 7) is linked to it and takes its category, skipping step 6.
 6. **Categorise** (section 4), then either assign or send to the review inbox.

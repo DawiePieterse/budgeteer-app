@@ -33,6 +33,91 @@
         <button type="submit">Save settings</button>
     </form>
 
+    <section class="card" id="gmail">
+        <h2>Bank emails (Gmail)</h2>
+        @forelse ($connections as $connection)
+            <div class="row">
+                <span>
+                    {{ $connection->email }}
+                    <span class="muted small block">
+                        @switch($connection->status)
+                            @case(\App\Models\GmailConnection::ACTIVE)
+                                Reading emails labelled <strong>{{ \App\Models\GmailConnection::LABEL }}</strong>@if ($connection->last_synced_at) · checked {{ $connection->last_synced_at->diffForHumans() }}@endif
+                                @break
+                            @case(\App\Models\GmailConnection::LABEL_MISSING)
+                                There is no Gmail label called <strong>{{ \App\Models\GmailConnection::LABEL }}</strong> yet. Create the filter below.
+                                @break
+                            @case(\App\Models\GmailConnection::NEEDS_RELINK)
+                                Google no longer allows reading this Gmail. Link it again.
+                                @break
+                            @default
+                                Last check failed: {{ $connection->last_error }}
+                        @endswitch
+                    </span>
+                </span>
+                <span class="inline actions">
+                    <form method="POST" action="{{ route('gmail.sync', $connection) }}">
+                        @csrf
+                        <button type="submit" class="secondary">Check now</button>
+                    </form>
+                    <form method="POST" action="{{ route('gmail.destroy', $connection) }}">
+                        @csrf
+                        <button type="submit" class="link">Unlink</button>
+                    </form>
+                </span>
+            </div>
+        @empty
+            <p class="muted small">Link the Gmail account that receives the bank's notification emails. Budgeteer can only read, never send or delete, and only reads emails with the <strong>{{ \App\Models\GmailConnection::LABEL }}</strong> label.</p>
+        @endforelse
+        <a class="button @if ($connections->isNotEmpty()) secondary @endif" href="{{ route('gmail.link') }}">{{ $connections->isEmpty() ? 'Link Gmail' : 'Link again or add another' }}</a>
+
+        <details class="small">
+            <summary>How to label the bank emails</summary>
+            <ol>
+                <li>In Gmail on a computer, search for <code>from:discovery subject:"Transaction update"</code>.</li>
+                <li>Click the filter icon in the search box, then <strong>Create filter</strong>.</li>
+                <li>Tick <strong>Apply the label</strong>, choose <strong>New label…</strong>, name it <code>{{ \App\Models\GmailConnection::LABEL }}</code>.</li>
+                <li>Tick <strong>Also apply filter to matching conversations</strong> and click <strong>Create filter</strong>.</li>
+            </ol>
+        </details>
+    </section>
+
+    @if ($cards->isNotEmpty())
+        <section class="card">
+            <h2>Cards</h2>
+            @foreach ($cards as $card)
+                <div class="row">
+                    <span>••{{ $card->number_ending }} <span class="muted small block">{{ $card->account->name }} ••{{ $card->account->number_ending }}</span></span>
+                    <span>{{ $card->holder_name ?? 'Main cardholder' }}</span>
+                </div>
+            @endforeach
+        </section>
+    @endif
+
+    @if ($emails->isNotEmpty())
+        <section class="card">
+            <h2>Latest bank emails</h2>
+            @foreach ($emails as $email)
+                <div class="row">
+                    <span>
+                        {{ $email->transaction?->description ?? $email->subject }}
+                        <span class="muted small block">{{ $email->received_at?->format('j M H:i') }} · {{ $email->sender }}@if ($email->note) · {{ $email->note }}@endif</span>
+                    </span>
+                    <span class="small">
+                        @switch($email->status)
+                            @case('added') Added @break
+                            @case('matched') On a statement @break
+                            @case('ignored') Skipped @break
+                            @case('unrecognised') Not read @break
+                            @default Failed
+                        @endswitch
+                        @if ($email->transaction) <span class="amount block">{{ money($email->transaction->amount_cents) }}</span> @endif
+                    </span>
+                </div>
+            @endforeach
+        </section>
+    @endif
+
     <section class="card">
         <h2>Who can sign in</h2>
         @foreach ($users as $user)

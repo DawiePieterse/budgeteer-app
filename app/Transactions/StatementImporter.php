@@ -99,7 +99,25 @@ class StatementImporter
             $merchants = Merchant::withoutGlobalScopes()->where('household_id', $household->id)->whereNotNull('category_id')->pluck('category_id', 'key');
             $ownNames = $household->ownAccountNames();
 
+            $matchedEmails = 0;
             foreach ($new as $line) {
+                $fromEmail = $this->emailTransaction($account, $line);
+                if ($fromEmail !== null) {
+                    // Already read from the bank's email: the statement confirms it and its wording wins,
+                    // so a later overlapping statement recognises the line.
+                    $fromEmail->update([
+                        'statement_import_id' => $import->id,
+                        'posted_on' => $line->date,
+                        'description' => mb_substr($line->description, 0, 255),
+                        'bank_type' => $line->bankType,
+                        'balance_after_cents' => $line->balanceCents,
+                        'line_on_statement' => $line->number,
+                    ]);
+                    $matchedEmails++;
+
+                    continue;
+                }
+
                 $kind = $this->classifier->kind($statement->bank, $line->bankType, $line->description, $line->amountCents, $ownNames[0] ?? '');
                 if (in_array($kind, [TransactionKind::Payment, TransactionKind::Deposit], true) && $this->isOwnName($line->description, $ownNames)) {
                     $kind = TransactionKind::Transfer;
@@ -126,6 +144,8 @@ class StatementImporter
                 ]);
             }
 
+            $import->update(['added' => count($new) - $matchedEmails, 'matched_emails' => $matchedEmails]);
+
             if ($account->statement_balance_on === null || $statement->to->greaterThanOrEqualTo($account->statement_balance_on)) {
                 $account->update(['statement_balance_cents' => $statement->closingCents, 'statement_balance_on' => $statement->to]);
             }
@@ -134,6 +154,19 @@ class StatementImporter
 
             return $import;
         });
+    }
+
+    /** A transaction read from an email for the same purchase, not yet confirmed by a statement. */
+    private function emailTransaction(Account $account, StatementLine $line): ?Transaction
+    {
+        return Transaction::withoutGlobalScopes()
+            ->where('account_id', $account->id)
+            ->where('source', TransactionSource::Email)
+            ->whereNull('statement_import_id')
+            ->where('amount_cents', $line->amountCents)
+            ->whereBetween('posted_on', [$line->date->subDays(EmailTransactions::STATEMENT_LAG_DAYS)->toDateString(), $line->date->addDay()->toDateString()])
+            ->orderByRaw('abs(datediff(posted_on, ?))', [$line->date->toDateString()])
+            ->first();
     }
 
     /**

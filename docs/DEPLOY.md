@@ -82,7 +82,7 @@ chmod -R u+rwX storage bootstrap/cache
 cd ~/budgeteer && /opt/cpanel/ea-php83/root/usr/bin/php artisan schedule:run >> /dev/null 2>&1
 ```
 
-Nothing is scheduled yet; Gmail sync will use it.
+It reads new bank emails from every linked Gmail account.
 
 ### 7. Check
 
@@ -90,6 +90,28 @@ Nothing is scheduled yet; Gmail sync will use it.
 2. Open `https://budget.bowlsbuddy.co.za` and **Sign in with Google**.
 3. In **Settings**, set the budget month start day and the names on payments between your own accounts
    (for example `DJ PIETERSE`), then add statements under **Statements**.
+
+## Reading bank emails (Gmail)
+
+In the **Google Cloud console**, project **Budgeteer**:
+
+1. **APIs & Services → Library**: search **Gmail API** and click **Enable**.
+2. **Google Auth Platform → Data access → Add or remove scopes**: add
+   `https://www.googleapis.com/auth/gmail.readonly` and save.
+3. **Google Auth Platform → Clients → Budgeteer web**: under **Authorised redirect URIs** add
+   `https://budget.bowlsbuddy.co.za/gmail/callback` (keep the sign-in one) and save.
+4. **Google Auth Platform → Audience**: the app must be **In production**. In Testing, Google withdraws Gmail
+   access after 7 days.
+
+In **Gmail** (the account the banks email), create the filter:
+
+1. Search `from:discovery subject:"Transaction update"`, open the search options, **Create filter**.
+2. Tick **Apply the label**, **New label…** `Budgeteer`, tick **Also apply filter to matching conversations**,
+   **Create filter**.
+
+In **Budgeteer**: Settings → **Link Gmail**. Google warns that the app is not verified: click **Advanced**,
+then **Go to budget.bowlsbuddy.co.za**, then tick **View your email messages and settings** and **Continue**.
+The first 30 days of labelled emails are read straight away; after that the cron job checks every 5 minutes.
 
 ## Updating to a new version
 

@@ -129,3 +129,10 @@ button.link { background: none; color: var(--accent); padding: 0; margin: 0; fon
 .visually-hidden {
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
+
+details { margin-top: 1rem; }
+summary { cursor: pointer; color: var(--accent); }
+ol { padding-left: 1.2rem; }
+.inline form { display: inline; }
+.row .actions { flex-basis: 100%; justify-content: flex-start; gap: 1rem; }
+.row .actions button { margin-top: 0; }
