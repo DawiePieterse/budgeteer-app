@@ -104,7 +104,7 @@ The household starts with two banks, both emailing the same Gmail:
 | Bank | Account | Parser | Notifications to read |
 |---|---|---|---|
 | Discovery Bank | Credit card (main and any secondary cards) | `DiscoveryBankParser` | Card purchases, refunds, declined purchases (ignored), repayments received |
-| Discovery Bank | Dewan's credit card (outside the budget, see "A card kept for someone else" in section 6) | `DiscoveryBankParser` | As above |
+| Discovery Bank | Dewan's card: an extra card on the same credit card account, with its own number (outside the budget, see "A card kept for someone else" in section 6) | `DiscoveryBankParser` | As above; the card number ending in each email says whose card it was |
 | Standard Bank | Cheque account | `StandardBankParser` | Card purchases, debit orders, EFTs and transfers out, payments in (salary, reimbursements) |
 
 **Transfers between your own accounts** do not count as spending. The monthly repayment of the Discovery
@@ -175,8 +175,9 @@ Each step runs only if the one before did not decide:
 
 ### A card kept for someone else
 
-Dewan has his own Discovery credit card, and its notifications come to the same Gmail. The household pays
-his card from the Standard Bank cheque account and Dewan pays the household back. His spending must not
+Dewan has an extra card on the household's Discovery credit card account, with its own card number, and
+its notifications come to the same Gmail. His purchases are paid off with the rest of the account, and Dewan
+pays the household back. His spending must not
 count against the household budget, but what he owes has to be visible on its own.
 
 - **Card setting "Charge to a person".** Dewan's card, recognised by its number ending, is set to charge
@@ -184,8 +185,12 @@ count against the household budget, but what he owes has to be visible on its ow
   reaches the budget or the review inbox. A category is still guessed and can be corrected, so his
   spending can be broken down, but it is shown only on his page.
 - **Refunds** on his card reduce what he owes.
-- **Repayments of his card** from the Standard Bank cheque account are transfers (section 3), so they do
-  not count as household spending either; paying his card does not clear what he owes you.
+- **There is no separate repayment of his card.** The account's single repayment covers both cards and is a
+  transfer (section 3); it does not clear what he owes you.
+- **Only the notification emails say which card was used.** The Discovery statement lists every purchase on
+  the account without the card number (section 8). A statement line that matches an email transaction takes
+  the card from the email. A statement line with no matching email goes to the review inbox with "Yours or
+  Dewan's?", and the answer is remembered for that merchant as a suggestion next time.
 - **Money from Dewan** (an EFT into the cheque account, recognised by his name or reference) is offered as
   a settlement against his balance; confirming it reduces what he owes, oldest items first.
 - **His page** shows his current balance, this month's spending on his card by category, and the list of
@@ -234,7 +239,7 @@ starts, and every month to catch anything the notification emails missed.
 ### Getting started from past statements
 
 1. **Upload** the last three to six statements from each bank on the Statements screen: the Standard Bank
-   cheque account, the Discovery credit card, and Dewan's card. A CSV or OFX export from online banking is
+   cheque account and the Discovery credit card account (which includes Dewan's card). A CSV or OFX export from online banking is
    read in preference to a PDF where the bank offers one, because it has no layout to guess.
 2. **Unlock.** A password-protected PDF is unlocked with the password typed in at upload. The password is
    not stored.
@@ -246,8 +251,10 @@ starts, and every month to catch anything the notification emails missed.
    into merchant memory and the word model, so the first real email is usually categorised automatically.
 5. **Set things up from what was found.** Recurring payments are suggested from debit orders that appear
    every month (medical aid, insurance), the card repayments are matched as transfers (section 3), and
-   Dewan's card history becomes his receivables. His opening balance is whatever he had not paid back at
-   the start of the imported period, typed in once.
+   Dewan's opening balance is typed in once: whatever he had not paid back at the start of the imported
+   period. Because the Discovery statement does not show which card was used, past purchases are not
+   split between the cards; his receivables start from the opening balance and build up from the
+   notification emails from then on. Past purchases can still be moved to him one by one if wanted.
 
 ### Every month after that
 
@@ -324,11 +331,13 @@ transactions, and every line's amount matched the change in the running balance.
   ending), ATM withdrawal fee and interest earned are recognised by their descriptions and go to Bank fees
   or Interest.
 - **Which card was used is not shown.** Purchases carry no card number ending, so a statement cannot tell
-  one cardholder's spending from another's on the same account. Dewan's spending is separated either by his
-  card being a separate account with its own statement, or by the notification emails (which name the
-  card); see section 6.
-- **`Pay` lines** (around R3,000 a month, no payee shown) are payments made from the card to someone else.
-  They go to the review inbox until a rule names them.
+  one cardholder's spending from another's on the same account. Dewan's card is on this account, so his
+  spending is separated by the notification emails, which name the card (section 6).
+- **`Pay` lines** (around R2,500 to R3,150 a month, no payee shown) are the Saldanha Bay Municipality account
+  (rates and services) paid from the card. They are set up as a monthly recurring payment with "amount
+  varies", matched on a Discovery description of exactly `Pay`, category Rates and services. Any other use of
+  Discovery Pay would look the same, so a `Pay` line more than 30% off the previous month goes to the
+  review inbox.
 
 A made-up statement in the same layout is the Pest fixture for `DiscoveryBankStatement`.
 
