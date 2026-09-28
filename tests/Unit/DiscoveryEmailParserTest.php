@@ -67,3 +67,15 @@ it('skips declined purchases', function () {
 it('says so when it meets a kind of email it does not know', function () {
     (new DiscoveryEmailParser)->parse(discoveryEmail(str_replace('Card payment', 'Something new', emailFixture('card-payment-main-card'))));
 })->throws(EmailNotUnderstood::class, 'Something new');
+
+it('reads ATM withdrawals, which say "From account ending"', function () {
+    $e = (new DiscoveryEmailParser)->parse(discoveryEmail(emailFixture('atm-withdrawal'), 'Transaction Update — 24 Aug 2026 16:30:06'));
+
+    expect($e->kind)->toBe(TransactionKind::Cash)
+        ->and($e->description)->toBe('Cnr Main Rd and Station St M')
+        ->and($e->amountCents)->toBe(-10000)
+        ->and($e->accountEnding)->toBe('1234')
+        ->and($e->cardEnding)->toBe('5678')
+        ->and($e->cardholder)->toBe('Sam Smith')
+        ->and($e->availableBalanceCents)->toBe(16586032);
+});

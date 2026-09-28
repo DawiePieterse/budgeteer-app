@@ -238,3 +238,18 @@ it('shows Gmail, cards and recent emails in settings', function () {
         ->assertSee('Sam Smith')
         ->assertSee('TAKEALOT CAPE TOWN');
 });
+
+it('reads again emails it could not read before', function () {
+    $connection = linkedGmail(member());
+    $odd = gmailMessage('x', 'card-payment-main-card', 'Transaction update — 26 Sep 2026 18:36:00', ['Card payment' => 'Something new']);
+    fakeGmail(['x' => $odd]);
+    app(GmailSync::class)->sync($connection);
+    expect(IngestedEmail::withoutGlobalScopes()->sole()->status)->toBe('unrecognised');
+
+    // The app has since learnt the new kind; here the email reads normally.
+    fakeGmail(['x' => gmailMessage('x', 'card-payment-main-card', 'Transaction update — 26 Sep 2026 18:36:00')]);
+    $this->artisan('budgeteer:gmail-sync --retry')->assertSuccessful();
+
+    expect(IngestedEmail::withoutGlobalScopes()->sole()->status)->toBe('added')
+        ->and(Transaction::withoutGlobalScopes()->count())->toBe(1);
+});

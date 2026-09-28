@@ -95,6 +95,39 @@ class GmailSync
         return $counts;
     }
 
+    /**
+     * Reads again the emails that could not be read before, for example after the app learnt a new
+     * kind of notification.
+     *
+     * @return array{added: int, matched: int, other: int, finished: bool}
+     */
+    public function retryUnread(GmailConnection $connection): array
+    {
+        $counts = ['added' => 0, 'matched' => 0, 'other' => 0, 'finished' => true];
+        $unread = IngestedEmail::withoutGlobalScopes()->where('gmail_connection_id', $connection->id)
+            ->whereIn('status', [IngestedEmail::UNRECOGNISED, IngestedEmail::FAILED])->get();
+
+        try {
+            foreach ($unread as $email) {
+                $message = $this->gmail->message($connection, $email->gmail_message_id);
+                $email->delete();
+                if ($message === null) {
+                    continue;
+                }
+                $status = $this->ingest($connection, $message);
+                $counts[match ($status) {
+                    IngestedEmail::ADDED => 'added', IngestedEmail::MATCHED => 'matched', default => 'other'
+                }]++;
+            }
+            $this->pairer->pair($connection->household_id);
+        } catch (GmailException $e) {
+            $connection->update(['status' => $e->needsRelink ? GmailConnection::NEEDS_RELINK : GmailConnection::ERROR, 'last_error' => mb_substr($e->getMessage(), 0, 500)]);
+            $counts['finished'] = false;
+        }
+
+        return $counts;
+    }
+
     private function ingest(GmailConnection $connection, GmailMessage $message): string
     {
         $record = [

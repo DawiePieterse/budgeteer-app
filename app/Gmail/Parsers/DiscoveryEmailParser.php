@@ -25,6 +25,9 @@ class DiscoveryEmailParser implements EmailParser
 {
     private const MERCHANT_AND_AMOUNT = '/^(.+?)\s+[–—-]\s+(R\s?[\d,]+\.\d{2})$/u';
 
+    /** "From ***4813", or "From account ending ***4813" on ATM withdrawals. */
+    private const FROM = '/^From\s+(?:account ending\s+)?\**(\d{4})\b/i';
+
     public function recognises(GmailMessage $message): bool
     {
         return str_contains($message->senderAddress(), 'discovery')
@@ -39,12 +42,12 @@ class DiscoveryEmailParser implements EmailParser
             throw new EmailNotUnderstood('No amount found.');
         }
         preg_match(self::MERCHANT_AND_AMOUNT, $lines[$index], $m);
-        $description = trim($m[1]);
+        $description = trim(preg_replace('/^At\s+/i', '', $m[1]) ?? $m[1]); // ATM emails: "At Cnr N7 and …"
         $cents = abs(Money::toCents($m[2]));
         $heading = $index > 0 ? $lines[$index - 1] : '';
 
         $kind = $this->kind($heading);
-        $accountEnding = $this->ending($lines, '/^From\s+\**(\d{4})\b/i');
+        $accountEnding = $this->ending($lines, self::FROM);
         if ($accountEnding === null) {
             throw new EmailNotUnderstood('No account number found.');
         }
@@ -52,7 +55,7 @@ class DiscoveryEmailParser implements EmailParser
 
         // The cardholder's name, when there is one, is the line between "From" and "Card ending".
         $cardholder = null;
-        $from = $this->find($lines, '/^From\s+\**\d{4}/i');
+        $from = $this->find($lines, self::FROM);
         $card = $this->find($lines, '/^Card ending/i');
         if ($from !== null && $card !== null && $card - $from === 2) {
             $cardholder = $lines[$from + 1];
