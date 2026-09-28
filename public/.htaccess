@@ -1,9 +1,15 @@
+Options -Indexes
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
     </IfModule>
 
     RewriteEngine On
+
+    # Files cPanel puts in the document root, and hidden files, are never served
+    RewriteRule ^(php\.ini|\.user\.ini|error_log|cgi-bin(/.*)?)$ - [F,L]
+    RewriteRule (^|/)\.(?!well-known/) - [F,L]
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
