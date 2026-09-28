@@ -42,6 +42,7 @@ scheduled jobs run by cPanel cron, so no background process has to stay alive.
 | `laravel-notification-channels/webpush` | 13 | Web push to the installed PWA (over budget, items to review, money owed) |
 | `anthropic-ai/sdk` (PHP) | 0.51 | Optional fallback: reads a bank email no parser recognises (section 5) |
 | `symfony/dom-crawler` | 7 or 8 | Reading values out of HTML bank emails |
+| `smalot/pdfparser` | 2 | Reading the text of PDF bank statements (pure PHP, so it runs on shared hosting) |
 
 Gmail is called through Laravel's HTTP client against the Gmail REST API, not `google/apiclient`, which is
 large and mostly unused here.
@@ -53,6 +54,7 @@ large and mostly unused here.
 | `app/Models` | `Household`, `User`, `GmailConnection`, `IngestedEmail`, `Account`, `Transaction`, `TransactionSplit`, `Category`, `Budget`, `Rule`, `Merchant`, `Person`, `Receivable`, `Settlement`, `RecurringPayment`, `RecurringOccurrence` |
 | `app/Services/Gmail` | OAuth tokens, `history.list` sync, message fetch |
 | `app/Parsers` | One parser per bank or card sender (`DiscoveryBankParser`, `StandardBankParser`), plus `ClaudeParser` as the fallback |
+| `app/Parsers/Statements` | One statement reader per bank and format (`DiscoveryBankStatement`, `StandardBankStatement`) |
 | `app/Services` | Merchant clean-up, categorising, learning, budget periods, recurring payments, reimbursements, payment matching |
 | `app/Filament` | Settings pages and resources |
 | `app/Http/Controllers` | Phone screens: home, review inbox, transactions, recurring payments, owed to me |
@@ -123,7 +125,7 @@ Every bank is handled the same way, so adding a third later is a code change of 
 Banks do not all email every kind of transaction; some send most alerts only by SMS or app notification.
 Before writing a parser, switch on email notifications in the Discovery Bank app and in Standard Bank's
 notification settings (where offered), then check a month of each bank's emails to see what arrives. Anything a bank does not email is
-covered by recurring payments marked paid by hand (section 7) or by manual entry.
+covered by the monthly statement (section 8), recurring payments marked paid by hand (section 7) or manual entry.
 
 ---
 
@@ -222,7 +224,51 @@ subscriptions) are set up once, so the budget knows about them before they go of
 
 ---
 
-## 8. Database
+## 8. Statements
+
+Both banks send a monthly statement. Statements are used twice: to fill in the history when Budgeteer
+starts, and every month to catch anything the notification emails missed.
+
+### Getting started from past statements
+
+1. **Upload** the last three to six statements from each bank on the Statements screen: the Standard Bank
+   cheque account, the Discovery credit card, and Dewan's card. A CSV or OFX export from online banking is
+   read in preference to a PDF where the bank offers one, because it has no layout to guess.
+2. **Unlock.** A password-protected PDF is unlocked with the password typed in at upload. The password is
+   not stored.
+3. **Read and preview.** The statement reader for that bank lists the transactions it found with the
+   statement's opening and closing balance. The import is refused if the transactions do not add up to the
+   difference between the two, so a misread line is caught before anything is saved.
+4. **Categorise by merchant, not by transaction.** Imported transactions are grouped by cleaned merchant,
+   largest first, and each group is categorised once ("all 23 WOOLWORTHS → Groceries"). Each choice goes
+   into merchant memory and the word model, so the first real email is usually categorised automatically.
+5. **Set things up from what was found.** Recurring payments are suggested from debit orders that appear
+   every month (medical aid, insurance), the card repayments are matched as transfers (section 3), and
+   Dewan's card history becomes his receivables. His opening balance is whatever he had not paid back at
+   the start of the imported period, typed in once.
+
+### Every month after that
+
+When a statement is uploaded, each line is matched to a transaction already captured from email (same
+account, same amount, date within 3 days; the merchant text is compared loosely because statements and
+emails describe it differently):
+
+| Result | What happens |
+|---|---|
+| Matched | Nothing; the email transaction is confirmed |
+| On the statement only | Added as a transaction from the statement and categorised as usual. Typical for debit orders the bank does not email; a matching recurring payment is marked paid |
+| In Budgeteer only | Listed for review: usually a declined or reversed purchase, which is then removed |
+
+The statement's closing balance is kept, so the app can show that each account agreed with the bank up to
+that date.
+
+**Later:** statements arrive by email, so they could be read from Gmail automatically like notifications.
+That needs the PDF password to be stored, which for Standard Bank may be an ID number, so it stays manual
+until it is worth that trade-off. Statement files are not kept once they have been read.
+
+---
+
+## 9. Database
 
 One database, `bowlsbg5n9w0_budgeteer`, created by Laravel migrations. Every table except Laravel's own has a
 `household_id`, and every query goes through a global scope on it.
@@ -234,7 +280,8 @@ One database, `bowlsbg5n9w0_budgeteer`, created by Laravel migrations. Every tab
 | `email_sources` | Known senders and the parser each uses |
 | `ingested_emails` | Gmail message ID, sender, received time, parse status, error |
 | `accounts` | Cards and bank accounts, identified by the number ending, with the person who uses each |
-| `transactions`, `transaction_splits` | Transactions, with their source (email or entered by hand), and their parts (category, or person for a receivable) |
+| `transactions`, `transaction_splits` | Transactions, with their source (email, statement or entered by hand), and their parts (category, or person for a receivable) |
+| `statement_imports` | Each uploaded statement: account, period, opening and closing balance, and how many lines matched, were added or were flagged |
 | `recurring_payments`, `recurring_occurrences` | Expected monthly or yearly payments, and each period's occurrence with its status (due, paid, not seen, skipped) and linked transaction |
 | `categories`, `budgets`, `budget_periods` | Category tree with icons, amount per category per period |
 | `rules`, `merchants`, `category_tokens` | Explicit rules, merchant memory, the word model |
@@ -253,7 +300,7 @@ One database, `bowlsbg5n9w0_budgeteer`, created by Laravel migrations. Every tab
 
 ---
 
-## 9. Hosting: Afrihost
+## 10. Hosting: Afrihost
 
 | What | Value |
 |---|---|
@@ -288,7 +335,7 @@ Budgeteer too. A separate Afrihost hosting account removes this link if it becom
 
 ---
 
-## 10. Google setup
+## 11. Google setup
 
 | What | Value |
 |---|---|
@@ -302,13 +349,13 @@ Budgeteer too. A separate Afrihost hosting account removes this link if it becom
 
 ---
 
-## 11. Development and checks
+## 12. Development and checks
 
 | Tool | What it checks | Command |
 |---|---|---|
 | Laravel Pint | Code style | `vendor/bin/pint --test` |
 | Larastan (PHPStan 2) | Static analysis, level 6 | `vendor/bin/phpstan analyse --memory-limit=1G --no-progress` |
-| Pest 3 | Unit and feature tests against a real MariaDB or MySQL; parsers tested against redacted sample emails in `tests/Fixtures/emails` | `vendor/bin/pest` |
+| Pest 3 | Unit and feature tests against a real MariaDB or MySQL; parsers tested against redacted sample emails in `tests/Fixtures/emails` and statement readers against redacted statements in `tests/Fixtures/statements` | `vendor/bin/pest` |
 | Playwright | Review inbox, splitting, recurring payments, owed to me, budgets in Chromium at 390 px | `scripts/e2e.sh` |
 | `composer audit` | Known security advisories in dependencies | `composer audit` |
 
@@ -321,7 +368,7 @@ in tests; no real mailbox is read during development.
 
 ---
 
-## 12. Costs
+## 13. Costs
 
 | Item | Cost |
 |---|---|
