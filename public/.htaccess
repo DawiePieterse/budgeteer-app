@@ -7,6 +7,11 @@ Options -Indexes
 
     RewriteEngine On
 
+    # Always HTTPS, even if cPanel's Force HTTPS Redirect is off (not for local development)
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:\d+)?$
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
     # Files cPanel puts in the document root, and hidden files, are never served
     RewriteRule ^(php\.ini|\.user\.ini|error_log|cgi-bin(/.*)?)$ - [F,L]
     RewriteRule (^|/)\.(?!well-known/) - [F,L]
