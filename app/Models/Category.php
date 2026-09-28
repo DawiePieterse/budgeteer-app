@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $household_id
  * @property string $name
  * @property CategoryKind $kind
+ * @property int|null $budget_cents
  * @property int $sort
  */
 class Category extends Model
@@ -20,7 +21,7 @@ class Category extends Model
     /** @use HasFactory<CategoryFactory> */
     use BelongsToHousehold, HasFactory;
 
-    protected $fillable = ['household_id', 'name', 'kind', 'sort'];
+    protected $fillable = ['household_id', 'name', 'kind', 'budget_cents', 'sort'];
 
     protected function casts(): array
     {

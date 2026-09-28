@@ -103,6 +103,7 @@ class StatementImporter
 
             $categories = Category::withoutGlobalScopes()->where('household_id', $household->id)->pluck('id', 'name');
             $merchants = Merchant::withoutGlobalScopes()->where('household_id', $household->id)->whereNotNull('category_id')->pluck('category_id', 'key');
+            $projects = Merchant::withoutGlobalScopes()->where('household_id', $household->id)->whereNotNull('project_id')->pluck('project_id', 'key');
             $ownNames = $household->ownAccountNames();
 
             $matchedEmails = 0;
@@ -143,7 +144,9 @@ class StatementImporter
                     'amount_cents' => $line->amountCents,
                     'kind' => $kind,
                     'is_transfer' => $kind === TransactionKind::Transfer,
-                    'category_id' => $kind === TransactionKind::Transfer ? null : ($categoryName !== null ? $categories[$categoryName] ?? null : $merchants[$key] ?? null),
+                    // Remembered choice first; fees, cash and interest fall back to their starter category.
+                    'category_id' => $kind === TransactionKind::Transfer ? null : ($merchants[$key] ?? ($categoryName !== null ? $categories[$categoryName] ?? null : null)),
+                    'project_id' => $kind === TransactionKind::Transfer ? null : ($projects[$key] ?? null),
                     'balance_after_cents' => $line->balanceCents,
                     'line_on_statement' => $line->number,
                     'updated_by' => $user->id,

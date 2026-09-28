@@ -36,6 +36,13 @@
                             @endforeach
                         </optgroup>
                     @endforeach
+                    @if ($projects->isNotEmpty())
+                        <optgroup label="Special projects (outside the budget)">
+                            @foreach ($projects as $project)
+                                <option value="{{ \App\Http\Controllers\CategoriseController::PROJECT }}{{ $project->id }}">{{ $project->name }}</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
                     <optgroup label="Not spending">
                         <option value="{{ \App\Http\Controllers\CategoriseController::TRANSFER }}">Between our own accounts</option>
                     </optgroup>

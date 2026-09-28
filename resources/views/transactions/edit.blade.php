@@ -34,6 +34,15 @@
                 @endforeach
             </select>
         @endif
+        @if ($projects->isNotEmpty())
+            <label for="project_id">Special project</label>
+            <select name="project_id" id="project_id">
+                <option value="">None (monthly budget)</option>
+                @foreach ($projects as $project)
+                    <option value="{{ $project->id }}" @selected($transaction->project_id === $project->id)>{{ $project->name }}</option>
+                @endforeach
+            </select>
+        @endif
         <label class="check">
             <input type="hidden" name="is_transfer" value="0">
             <input type="checkbox" name="is_transfer" value="1" @checked($transaction->is_transfer)>

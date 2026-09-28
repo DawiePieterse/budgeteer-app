@@ -11,13 +11,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $household_id
  * @property string $key
  * @property int|null $category_id
+ * @property int|null $project_id
  * @property int $times_confirmed
  */
 class Merchant extends Model
 {
     use BelongsToHousehold;
 
-    protected $fillable = ['household_id', 'key', 'category_id', 'times_confirmed'];
+    protected $fillable = ['household_id', 'key', 'category_id', 'project_id', 'times_confirmed'];
 
     /** @return BelongsTo<Category, $this> */
     public function category(): BelongsTo

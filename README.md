@@ -25,10 +25,17 @@ emails. Built with Laravel 12 for the Afrihost hosting that runs Bowls Buddy. Th
   owed to you instead of counted in the budget. Their page shows what they owe (from an opening balance you
   type in), what they bought, repayments, and a WhatsApp reminder; payments into your accounts that mention
   them are offered as repayments with one tap.
+- **Budget:** a monthly amount per category, pasted straight from a spreadsheet (one line per item, the
+  amount last). The home screen draws each budget line as a meter: the full track is 100% of the budget,
+  filled to what has been spent, with the percentage; over budget turns red with a ⚠ and "over". Starter
+  categories can be moved into yours, and unused ones removed.
+- **Special projects** (for example a car rebuild): payments are kept out of the monthly budget and shown on
+  the project's own page with their total, a month-by-month list and an optional project budget. A merchant
+  can be sent to a project once from Categorise, and its later payments follow.
 - **Settings:** household name, the day the budget month starts, the names on payments between your own
   accounts, and account names.
 
-Next: recurring payments, budgets per category, Standard Bank emails.
+Next: recurring payments.
 
 ## Running it locally
 

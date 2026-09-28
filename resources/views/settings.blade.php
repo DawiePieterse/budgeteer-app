@@ -12,6 +12,8 @@
             <label for="name">Name</label>
             <input type="text" name="name" id="name" value="{{ old('name', $household->name) }}" required maxlength="100">
 
+            <p class="small"><a href="{{ route('budget') }}">Budget and categories ›</a></p>
+
             <label for="period_start_day">Budget month starts on day</label>
             <input type="number" name="period_start_day" id="period_start_day" min="1" max="28" value="{{ old('period_start_day', $household->period_start_day) }}" required>
 

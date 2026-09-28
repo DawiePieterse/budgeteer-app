@@ -12,21 +12,37 @@
     @endif
 
     <section class="totals">
-        <div><span class="muted small">Money in</span><strong class="in">{{ money($received) }}</strong></div>
-        <div><span class="muted small">Spent</span><strong>{{ money($spent) }}</strong></div>
-        <div><span class="muted small">Difference</span><strong @class(['in' => $received >= $spent, 'out' => $received < $spent])>{{ money($received - $spent) }}</strong></div>
+        @if ($budgeted > 0)
+            <div><span class="muted small">Spent of budget</span><strong @class(['out' => $spent > $budgeted])>{{ money($spent) }}</strong><span class="muted small">of {{ money($budgeted) }}</span></div>
+            <div><span class="muted small">{{ $spent > $budgeted ? 'Over budget' : 'Left to spend' }}</span><strong @class(['in' => $spent <= $budgeted, 'out' => $spent > $budgeted])>{{ money(abs($budgeted - $spent)) }}</strong></div>
+        @else
+            <div><span class="muted small">Money in</span><strong class="in">{{ money($received) }}</strong></div>
+            <div><span class="muted small">Spent</span><strong>{{ money($spent) }}</strong></div>
+        @endif
+        <div><span class="muted small">Money in − spent</span><strong @class(['in' => $received >= $spent, 'out' => $received < $spent])>{{ money($received - $spent) }}</strong><span class="muted small">{{ money($received) }} in</span></div>
     </section>
 
+    @php($budgetLines = collect($spending)->filter(fn ($r) => ($r['budget'] ?? null) !== null))
+    @php($otherLines = collect($spending)->filter(fn ($r) => ($r['budget'] ?? null) === null))
+    @if ($budgeted > 0)
+        <section class="card">
+            <h2>Budget <a class="small" href="{{ route('budget') }}">Change ›</a></h2>
+            <x-budget-bar class="total" :spent="(int) $budgetLines->sum('cents')" :budget="$budgeted" label="All budget lines" />
+            @foreach ($budgetLines as $row)
+                <x-budget-bar :spent="$row['cents']" :budget="$row['budget']" :label="$row['name']" />
+            @endforeach
+        </section>
+    @endif
+
     <section class="card">
-        <h2>Spending</h2>
-        @forelse ($spending as $row)
+        <h2>{{ $budgeted > 0 ? 'Not in the budget' : 'Spending' }}@if ($budgeted === 0) <a class="small" href="{{ route('budget') }}">Set a budget ›</a>@endif</h2>
+        @forelse ($otherLines as $row)
             <div class="row">
                 <span>{{ $row['name'] }}</span>
                 <span class="amount">{{ money($row['cents']) }}</span>
-                <progress max="100" value="{{ $spent > 0 ? max(1, round($row['cents'] / $spent * 100)) : 0 }}" aria-hidden="true"></progress>
             </div>
         @empty
-            <p class="muted">Nothing spent in this period yet. <a href="{{ route('statements.index') }}">Add a statement</a>.</p>
+            <p class="muted small">@if ($budgeted > 0) Everything spent is in a budget line. @else Nothing spent in this period yet. <a href="{{ route('statements.index') }}">Add a statement</a>. @endif</p>
         @endforelse
     </section>
 
@@ -35,6 +51,15 @@
             <h2>Money in</h2>
             @foreach ($income as $row)
                 <div class="row"><span>{{ $row['name'] }}</span><span class="amount in">{{ money($row['cents']) }}</span></div>
+            @endforeach
+        </section>
+    @endif
+
+    @if ($projects->isNotEmpty())
+        <section class="card">
+            <h2>Special projects</h2>
+            @foreach ($projects as $project)
+                <a class="row" href="{{ route('projects.show', $project) }}"><span>{{ $project->name }}</span><span class="amount">{{ money($project->spentCents()) }} ›</span></a>
             @endforeach
         </section>
     @endif

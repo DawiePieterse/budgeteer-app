@@ -10,6 +10,10 @@
     --out: #b42318;
     --ok-bg: #e7f5ee;
     --error-bg: #fdecea;
+    /* Budget meters: validated with the dataviz palette checks (lightness, chroma, contrast). */
+    --meter-fill: #0d9488;
+    --meter-track: #d5efeb;
+    --meter-over: #d03b3b;
     color-scheme: light;
 }
 
@@ -26,6 +30,9 @@
         --out: #f87171;
         --ok-bg: #16322a;
         --error-bg: #3a1d1b;
+        --meter-fill: #1ea896;
+        --meter-track: #20403c;
+        --meter-over: #d03b3b;
         color-scheme: dark;
     }
 }
@@ -89,6 +96,8 @@ code { font-size: 0.9em; }
 .totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
 .totals div { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 0.75rem; min-width: 0; }
 .totals div:last-child { grid-column: 1 / -1; }
+.totals .muted.small { display: block; }
+h2 a.small { float: right; font-weight: 400; }
 .totals strong { display: block; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
 
 .period { display: flex; align-items: center; justify-content: space-between; }
@@ -140,3 +149,28 @@ ol { padding-left: 1.2rem; }
 .spaced { margin-top: 1.25rem; }
 .inline > span { flex: 1; min-width: 0; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; align-items: end; }
+.budget-row { margin-bottom: 0.6rem; align-items: start; grid-template-columns: 2fr 1fr; }
+.budget-row .muted { display: block; margin-top: 0.15rem; }
+.row .of { font-size: 0.8rem; }
+.over { color: var(--out); font-weight: 600; }
+progress.over-bar { accent-color: var(--out); }
+
+/* Budget meter: the track is the budget (100%), the fill is spent so far. */
+.meter { padding: 0.6rem 0; border-bottom: 1px solid var(--line); }
+.meter:last-child { border-bottom: 0; }
+.meter-head, .meter-foot { display: flex; justify-content: space-between; gap: 1rem; font-variant-numeric: tabular-nums; }
+.meter-head a { color: inherit; text-decoration: none; }
+.meter-pct { font-size: 0.95rem; white-space: nowrap; }
+.meter-head > :first-child { flex: 1; min-width: 0; }
+.is-over .meter-pct { color: var(--meter-over); }
+.meter-foot { font-size: 0.82rem; margin-top: 0.3rem; }
+.meter-bar { display: block; width: 100%; height: 10px; margin-top: 0.35rem; border-radius: 4px; overflow: hidden; }
+.meter-track { fill: var(--meter-track); }
+.meter-fill { fill: var(--meter-fill); }
+.is-over .meter-fill { fill: var(--meter-over); }
+.meter.total .meter-bar { height: 14px; }
+.meter.total .meter-pct { font-size: 1.2rem; }
+@media (forced-colors: active) {
+    .meter-track { fill: Canvas; stroke: CanvasText; }
+    .meter-fill { fill: Highlight; }
+}

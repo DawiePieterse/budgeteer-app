@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\Auth\DevLoginController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\CategoriseController;
 use App\Http\Controllers\GmailController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PersonController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StatementController;
 use App\Http\Controllers\TransactionController;
@@ -43,6 +45,17 @@ Route::middleware(['auth', 'throttle:120,1'])->group(function () {
     Route::get('/gmail/callback', [GmailController::class, 'callback'])->middleware('throttle:10,1')->name('gmail.callback');
     Route::post('/gmail/{connection}/sync', [GmailController::class, 'sync'])->middleware('throttle:10,1')->name('gmail.sync');
     Route::post('/gmail/{connection}/delete', [GmailController::class, 'destroy'])->name('gmail.destroy');
+
+    Route::get('/budget', [BudgetController::class, 'edit'])->name('budget');
+    Route::post('/budget', [BudgetController::class, 'update'])->name('budget.update');
+    Route::post('/budget/paste', [BudgetController::class, 'paste'])->name('budget.paste');
+    Route::post('/budget/merge', [BudgetController::class, 'merge'])->name('budget.merge');
+    Route::post('/budget/tidy', [BudgetController::class, 'tidy'])->name('budget.tidy');
+
+    Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
+    Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+    Route::post('/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
+    Route::post('/projects/{project}/forget/{key}', [ProjectController::class, 'forgetMerchant'])->name('projects.forget');
 
     Route::post('/cards/{card}', [CardController::class, 'update'])->name('cards.update');
 

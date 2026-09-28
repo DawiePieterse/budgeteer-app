@@ -72,7 +72,8 @@ class EmailTransactions
             default => $this->merchantKey->for($email->description),
         };
         $categoryId = match ($kind) {
-            TransactionKind::Cash => Category::withoutGlobalScopes()->where('household_id', $householdId)->where('name', 'Cash')->value('id'),
+            TransactionKind::Cash => Merchant::withoutGlobalScopes()->where('household_id', $householdId)->where('key', 'CASH')->value('category_id')
+                ?? Category::withoutGlobalScopes()->where('household_id', $householdId)->where('name', 'Cash')->value('id'),
             TransactionKind::Transfer => null,
             default => Merchant::withoutGlobalScopes()->where('household_id', $householdId)->where('key', $key)->value('category_id'),
         };
@@ -91,6 +92,7 @@ class EmailTransactions
             'is_transfer' => $kind === TransactionKind::Transfer,
             'category_id' => $categoryId,
             'person_id' => $card?->charge_to_person_id,
+            'project_id' => $kind === TransactionKind::Transfer ? null : Merchant::withoutGlobalScopes()->where('household_id', $householdId)->where('key', $key)->value('project_id'),
         ]);
 
         return [$transaction, false];
