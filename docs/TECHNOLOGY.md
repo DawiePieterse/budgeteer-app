@@ -351,7 +351,7 @@ list of short lines, which `DiscoveryBankParser` reads in order:
 | Heading | `Card payment` | Type (purchase; other headings for refunds, payments received and declines) |
 | Merchant and amount | `Checkers Sixty60 Cape To – R 469.88` | Merchant (the name is cut short, as on the statement) and amount |
 | Account | `From ***1234` | Account, by the account number ending |
-| Cardholder | `Jane Doe` | Who used the card |
+| Cardholder | `Jane Doe` | Who used the card. Only on extra cards: the main cardholder's emails leave this line out, so the parser treats it as optional and goes by the card ending |
 | Card | `Card ending ***5678` | Card, by number ending |
 | Date and time | `Sunday, 27 September at 16:19` | Transaction time; the year comes from the subject |
 | Available balance | `Available balance: R 165,371.88` | Kept on the account as its latest available balance (balance plus credit limit) |
@@ -361,6 +361,10 @@ list of short lines, which `DiscoveryBankParser` reads in order:
 - A purchase is emailed straight away but appears on the statement a day or two later, sometimes under the
   next statement's period. Matching a statement line to an email allows a few days either way, as
   section 8 describes.
+- The merchant name can differ between the email and the statement for the same purchase (seen: an email
+  for `WOOLWORTHS TYGERVALLEY ZA` on the 26th was `WOOLWORTHS BELLVILLE` on the statement on the 27th, same
+  amount). Matching therefore relies on account, exact amount and date; the merchant only breaks a tie
+  between two purchases of the same amount.
 
 **Later:** statements arrive by email, so they could be read from Gmail automatically like notifications.
 The Standard Bank statement needs no password, so it can be read from Gmail once uploading works; a bank
