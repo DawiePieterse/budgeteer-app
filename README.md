@@ -34,6 +34,10 @@ php artisan serve
 Set `BUDGETEER_DEV_LOGIN=true` in `.env` (local only) to sign in without Google. On Claude Code on the web,
 `.claude/hooks/session-start.sh` installs MariaDB and does all of this.
 
+## Deploying
+
+See [docs/DEPLOY.md](docs/DEPLOY.md): `scripts/build-afrihost.sh` builds the zip to upload.
+
 ## Checks
 
 ```sh
