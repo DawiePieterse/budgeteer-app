@@ -102,6 +102,7 @@ The household starts with two banks, both emailing the same Gmail:
 | Bank | Account | Parser | Notifications to read |
 |---|---|---|---|
 | Discovery Bank | Credit card (main and any secondary cards) | `DiscoveryBankParser` | Card purchases, refunds, declined purchases (ignored), repayments received |
+| Discovery Bank | Dewan's credit card (outside the budget, see "A card kept for someone else" in section 6) | `DiscoveryBankParser` | As above |
 | Standard Bank | Cheque account | `StandardBankParser` | Card purchases, debit orders, EFTs and transfers out, payments in (salary, reimbursements) |
 
 **Transfers between your own accounts** do not count as spending. The monthly repayment of the Discovery
@@ -170,6 +171,25 @@ Each step runs only if the one before did not decide:
 - **Settling:** a "payment received" email of the same amount is offered as the match; confirming it closes the
   receivable.
 
+### A card kept for someone else
+
+Dewan has his own Discovery credit card, and its notifications come to the same Gmail. His spending must
+not count against the household budget, but what he owes has to be visible on its own.
+
+- **Card setting "Charge to a person".** Dewan's card, recognised by its number ending, is set to charge
+  to the person Dewan. Every transaction on it goes straight to his receivables, in full, and never
+  reaches the budget or the review inbox. A category is still guessed and can be corrected, so his
+  spending can be broken down, but it is shown only on his page.
+- **Refunds** on his card reduce what he owes.
+- **Repayments of his card** from the Standard Bank cheque account are transfers (section 3), so they do
+  not count as household spending either; paying his card does not clear what he owes you.
+- **Money from Dewan** (an EFT into the cheque account, recognised by his name or reference) is offered as
+  a settlement against his balance; confirming it reduces what he owes, oldest items first.
+- **His page** shows his current balance, this month's spending on his card by category, and the list of
+  transactions and settlements, with the same WhatsApp request as any other person. Both of you see it.
+- **Home screen and budgets** leave his card out of every total. His balance appears only as a single line
+  in "Owed to me".
+
 ---
 
 ## 7. Recurring payments
@@ -217,7 +237,7 @@ One database, `bowlsbg5n9w0_budgeteer`, created by Laravel migrations. Every tab
 | `recurring_payments`, `recurring_occurrences` | Expected monthly or yearly payments, and each period's occurrence with its status (due, paid, not seen, skipped) and linked transaction |
 | `categories`, `budgets`, `budget_periods` | Category tree with icons, amount per category per period |
 | `rules`, `merchants`, `category_tokens` | Explicit rules, merchant memory, the word model |
-| `people`, `receivables`, `settlements` | People who owe money, what they owe, how it was paid |
+| `people`, `receivables`, `settlements` | People who owe money, what they owe, how it was paid; `accounts` can name a person to charge every transaction to |
 | `push_subscriptions` | Web push endpoints per device |
 | `bg_sessions`, `bg_cache`, `bg_cache_locks`, `bg_jobs`, `bg_failed_jobs`, `bg_migrations` | Laravel's own tables |
 
