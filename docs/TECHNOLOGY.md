@@ -203,11 +203,11 @@ subscriptions) are set up once, so the budget knows about them before they go of
 | Field | Example |
 |---|---|
 | Name and category | Medical aid, Medical |
-| Match text | Payee or debit order reference as it appears in the bank email, for example `DISCOVERY HEALTH` |
-| Expected amount and tolerance | R4,500, within R50 or 2% |
+| Match text | The stable start of the payee as it appears in the bank email or statement, for example `DISC PREM` or `MOMENTUM`; the reference after it changes every month and is ignored |
+| Expected amount and tolerance | R4,500, within R50 or 2%; or "amount varies" for payments like a municipal account, matched on text and date only |
 | Day of the month | 1st (matched from 3 days before to 5 days after) |
 | Account | The account it is paid from; optional |
-| Frequency | Monthly, or yearly for things like a car licence |
+| Frequency | Weekly (for example a cleaner), monthly, or yearly for things like a car licence |
 
 - **Each budget period** creates an expected occurrence for every active recurring payment.
 - **Matched:** a transaction with the match text, within the tolerance and the date window, is linked to the
@@ -217,8 +217,10 @@ subscriptions) are set up once, so the budget knows about them before they go of
 - **Not seen:** an occurrence still open 5 days after its date goes to the review inbox. It can be marked
   paid by hand (for a bank that does not email debit orders), which creates the transaction, or marked
   skipped for that month.
-- **Suggestions:** a cleaned merchant paid at a similar amount in each of the last three periods is offered
-  as a new recurring payment.
+- **Suggestions:** a cleaned merchant paid at a similar amount in each of the last three periods (or every
+  week) is offered as a new recurring payment. Matching uses the payee, not the transaction type, because
+  the bank can relabel the same debit order (seen: a debit order whose type changed from one month to the
+  next with the same payee and amount).
 - **Budget view:** the home screen shows what is already paid, what recurring payments are still due this
   period, and what is left to spend after both.
 
@@ -262,9 +264,46 @@ emails describe it differently):
 The statement's closing balance is kept, so the app can show that each account agreed with the bank up to
 that date.
 
+### Standard Bank statement (checked against a real 6-month statement)
+
+A 6-month PDF statement for the cheque account was read in full: 173 transactions over 11 pages, and the
+opening balance plus every line matched both the running balance on each line and the statement summary
+to the cent. What it showed:
+
+- **Layout.** Each transaction is three lines: date and payee (`02 Apr 26 <payee>`), then the transaction
+  type, then the amount and the running balance. Payments are printed negative, deposits positive, and the
+  balance can go negative (overdraft). The page header and footer repeat on every page and are skipped.
+  The opening balance is on the first transactions page; the summary (total payments and deposits) is on
+  the last. The file is encrypted but opens without a password, so no password is needed at upload.
+- **Afrikaans.** Transaction types are in the account's language, here Afrikaans (`IB-BETALING NA`,
+  `DEBIETOORPLASING`, `MEDIESEFONSBYDRAE`, `VERSEKERINGSPREMIE`, `KREDIETOORPLASING`, `VASTE MAANDELIKSE
+  FOOI`, and others). The reader maps both the Afrikaans and English names to the same kinds: payment out,
+  debit order, transfer in or out, deposit, cash withdrawal, bank fee, interest. Notification emails are
+  likely to be in the same language, so the email parser uses the same list.
+- **No card purchases.** Day-to-day spending is on the Discovery card, not on this account. The cheque
+  account carries the card repayment, debit orders (medical aid, insurance), payments to people (a weekly
+  cleaner, levies, storage, church), cash withdrawals, bank fees and income.
+- **A third own account.** Large transfers come in from, and go out to, another Standard Bank account
+  identified only by its number. Transfers to and from any account set up as the household's own are
+  transfers, not income or spending, in the same way as the card repayment. That account is added as a
+  household account (its balance does not need to be tracked) so these are recognised.
+- **Income.** Consulting income and rent from a rental property arrive by EFT, and some card-machine
+  settlements (SnapScan). Income is recorded with its own categories so the home screen can show money in
+  against money out for the period, but it does not change category budgets.
+- **Card repayment varies.** The Discovery card is paid with a different amount each month (the full card
+  balance), so it is matched as a transfer by amount against the Discovery "payment received", never set
+  up as a fixed recurring payment.
+- **References change monthly.** Several debit orders carry a new reference every month (policy or
+  collection numbers, the month name). Match text uses only the part that stays the same.
+- **Fees are small but recurring.** Monthly account fee, overdraft service fee and interest, and a fee per
+  instant payment are grouped under Bank fees automatically by type.
+
+A made-up statement in the same layout, with invented names, numbers and amounts, is the Pest fixture for
+`StandardBankStatement`. The real statement is never committed.
+
 **Later:** statements arrive by email, so they could be read from Gmail automatically like notifications.
-That needs the PDF password to be stored, which for Standard Bank may be an ID number, so it stays manual
-until it is worth that trade-off. Statement files are not kept once they have been read.
+The Standard Bank statement needs no password, so it can be read from Gmail once uploading works; a bank
+whose statements need a password (possibly an ID number) stays manual rather than storing it. Statement files are not kept once they have been read.
 
 ---
 
