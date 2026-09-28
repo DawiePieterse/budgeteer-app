@@ -283,13 +283,14 @@ to the cent. What it showed:
 - **No card purchases.** Day-to-day spending is on the Discovery card, not on this account. The cheque
   account carries the card repayment, debit orders (medical aid, insurance), payments to people (a weekly
   cleaner, levies, storage, church), cash withdrawals, bank fees and income.
-- **A third own account.** Large transfers come in from, and go out to, another Standard Bank account
-  identified only by its number. Transfers to and from any account set up as the household's own are
-  transfers, not income or spending, in the same way as the card repayment. That account is added as a
-  household account (its balance does not need to be tracked) so these are recognised.
-- **Income.** Consulting income and rent from a rental property arrive by EFT, and some card-machine
-  settlements (SnapScan). Income is recorded with its own categories so the home screen can show money in
-  against money out for the period, but it does not change category budgets.
+- **A money market account.** Large transfers come in from, and go out to, the household's Standard Bank
+  money market account, identified only by its number. It funds the cheque account and also pays the
+  Discovery card directly. It is set up as one of the household's own accounts (its balance does not need
+  to be tracked), so every movement to or from it is a transfer, never income or spending.
+- **Income.** Consulting income and rent from the rental property arrive by EFT, and some card-machine
+  settlements (SnapScan). All of it is household income, in its own categories (Consulting, Rental, Other),
+  so the home screen can show money in against money out for the period; it does not change category
+  budgets. The rental property's costs are ordinary household spending, not tracked separately.
 - **Card repayment varies.** The Discovery card is paid with a different amount each month (the full card
   balance), so it is matched as a transfer by amount against the Discovery "payment received", never set
   up as a fixed recurring payment.
@@ -300,6 +301,36 @@ to the cent. What it showed:
 
 A made-up statement in the same layout, with invented names, numbers and amounts, is the Pest fixture for
 `StandardBankStatement`. The real statement is never committed.
+
+### Discovery Bank statement (checked against a real 3-month statement)
+
+A 3-month PDF statement for the credit card account (11 pages, not encrypted) was read in full: 404
+transactions, and every line's amount matched the change in the running balance.
+
+- **Layout.** One line per transaction: ISO date, description, amount and running balance, with `R` and
+  non-breaking spaces before the numbers (`2026-06-28 WOOLWORTHS CAPE TOWN R 356.10 R 51,397.39`). The
+  debit and credit columns cannot be told apart in the extracted text, so the reader takes the sign from the
+  change in balance; the first line's sign comes from the column position in the PDF. There is no opening
+  balance line; it is worked out from the first transaction.
+- **The account is kept in credit.** The balance is money available, not debt, and Discovery pays interest
+  on it. Purchases lower it, payments raise it. The reader stores the balance as the bank shows it.
+- **Payments in** are named after the account holder only (`DJ PIETERSE`). They come from the cheque
+  account (matched by amount and date against the Standard Bank payment) or straight from the money market
+  account; any payment in from the account holder is a transfer from an own account, never income.
+- **Refunds** start with `Refund` and reduce the category they came from.
+- **Foreign purchases** show the original amount and currency in the description (`250.00 KES`) and are
+  followed by a separate `Intl payment fee` line, which goes to Bank fees.
+- **Fees and interest.** Monthly account fee, monthly facility fee, card fee (with the card's number
+  ending), ATM withdrawal fee and interest earned are recognised by their descriptions and go to Bank fees
+  or Interest.
+- **Which card was used is not shown.** Purchases carry no card number ending, so a statement cannot tell
+  one cardholder's spending from another's on the same account. Dewan's spending is separated either by his
+  card being a separate account with its own statement, or by the notification emails (which name the
+  card); see section 6.
+- **`Pay` lines** (around R3,000 a month, no payee shown) are payments made from the card to someone else.
+  They go to the review inbox until a rule names them.
+
+A made-up statement in the same layout is the Pest fixture for `DiscoveryBankStatement`.
 
 **Later:** statements arrive by email, so they could be read from Gmail automatically like notifications.
 The Standard Bank statement needs no password, so it can be read from Gmail once uploading works; a bank
