@@ -175,3 +175,9 @@ progress.over-bar { accent-color: var(--out); }
     .meter-fill { fill: Highlight; }
 }
 select.suggested { border-color: var(--accent); }
+.status { font-weight: 600; font-size: 0.85rem; }
+.status.ok { color: var(--in); }
+.recurring-row .actions { gap: 1rem; }
+.recurring-edit { border-bottom: 1px solid var(--line); padding: 0.6rem 0; margin: 0; }
+.recurring-edit:last-child { border-bottom: 0; }
+.recurring-edit summary { color: var(--text); }

@@ -7,7 +7,9 @@ use App\Models\Account;
 use App\Models\Category;
 use App\Models\Person;
 use App\Models\Project;
+use App\Models\RecurringPayment;
 use App\Models\Transaction;
+use App\Recurring\RecurringSchedule;
 use App\Services\BudgetPeriod;
 use App\Services\PersonBalance;
 use Carbon\CarbonImmutable;
@@ -16,7 +18,7 @@ use Illuminate\View\View;
 
 class HomeController extends Controller
 {
-    public function __invoke(Request $request, PersonBalance $balances): View
+    public function __invoke(Request $request, PersonBalance $balances, RecurringSchedule $schedule): View
     {
         $household = $request->user()->household;
         $date = $request->date('in') ? CarbonImmutable::parse($request->date('in')) : CarbonImmutable::today();
@@ -62,6 +64,7 @@ class HomeController extends Controller
             'received' => array_sum(array_column($income, 'cents')),
             'toCategorise' => Transaction::query()->whereNull('category_id')->where('is_transfer', false)->whereNull('person_id')->whereNull('project_id')->count(),
             'projects' => Project::query()->orderBy('name')->get(),
+            'recurring' => $schedule->occurrences(RecurringPayment::query()->where('active', true)->get(), $period),
             'owedToUs' => Person::query()->orderBy('name')->get()->map(fn (Person $p) => ['person' => $p, 'cents' => $balances->owed($p)]),
             'accounts' => Account::query()->orderBy('bank')->get(),
         ]);

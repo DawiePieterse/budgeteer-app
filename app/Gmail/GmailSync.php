@@ -10,6 +10,7 @@ use App\Gmail\Parsers\StandardBankEmailParser;
 use App\Models\GmailConnection;
 use App\Models\Household;
 use App\Models\IngestedEmail;
+use App\Recurring\RecurringMatcher;
 use App\Transactions\EmailTransactions;
 use App\Transactions\TransferPairer;
 use Carbon\CarbonInterface;
@@ -36,6 +37,7 @@ class GmailSync
         private GmailClient $gmail,
         private EmailTransactions $transactions,
         private TransferPairer $pairer,
+        private RecurringMatcher $recurring,
         DiscoveryEmailParser $discovery,
         StandardBankEmailParser $standardBank,
     ) {
@@ -82,6 +84,7 @@ class GmailSync
             }
 
             $this->pairer->pair($connection->household_id);
+            $this->recurring->link($connection->household_id);
             $update = ['label_id' => $labelId, 'status' => GmailConnection::ACTIVE, 'last_error' => null, 'last_synced_at' => now()];
             if ($counts['finished']) {
                 $update['history_id'] = $historyId;
@@ -134,6 +137,7 @@ class GmailSync
                 }]++;
             }
             $this->pairer->pair($connection->household_id);
+            $this->recurring->link($connection->household_id);
         } catch (GmailException $e) {
             $connection->update(['status' => $e->needsRelink ? GmailConnection::NEEDS_RELINK : GmailConnection::ERROR, 'last_error' => mb_substr($e->getMessage(), 0, 500)]);
             $counts['finished'] = false;
@@ -167,6 +171,7 @@ class GmailSync
                 }]++;
             }
             $this->pairer->pair($connection->household_id);
+            $this->recurring->link($connection->household_id);
         } catch (GmailException $e) {
             $connection->update(['status' => $e->needsRelink ? GmailConnection::NEEDS_RELINK : GmailConnection::ERROR, 'last_error' => mb_substr($e->getMessage(), 0, 500)]);
             $counts['finished'] = false;

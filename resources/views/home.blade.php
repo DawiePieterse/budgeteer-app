@@ -22,6 +22,23 @@
         <div><span class="muted small">Money in − spent</span><strong @class(['in' => $received >= $spent, 'out' => $received < $spent])>{{ money($received - $spent) }}</strong><span class="muted small">{{ money($received) }} in</span></div>
     </section>
 
+    @if ($recurring !== [])
+        @php($attention = collect($recurring)->filter->needsAttention())
+        @php($paid = collect($recurring)->whereIn('status', ['paid', 'paid_by_hand'])->count())
+        <section class="card">
+            <h2>Recurring payments <a class="small" href="{{ route('recurring.index', ['in' => $period->from->toDateString()]) }}">All ›</a></h2>
+            <p class="small">{{ $paid }} of {{ count($recurring) }} paid this month @if ($attention->isEmpty()) · <span class="status ok">✓ nothing unusual</span>@endif</p>
+            @foreach ($attention as $o)
+                <a class="row" href="{{ route('recurring.index', ['in' => $period->from->toDateString()]) }}">
+                    <span>{{ $o->payment->name }} <span class="muted small block">{{ $o->dueOn->format('j M') }}</span></span>
+                    <span class="amount"><span class="status over">⚠ {{ $o->label() }}</span>
+                        <span class="muted small block">@if ($o->transaction) {{ money(abs($o->transaction->amount_cents)) }}, expected {{ money($o->payment->amount_cents) }} @else {{ money($o->payment->amount_cents) }} not seen @endif</span>
+                    </span>
+                </a>
+            @endforeach
+        </section>
+    @endif
+
     @php($budgetLines = collect($spending)->filter(fn ($r) => ($r['budget'] ?? null) !== null))
     @php($otherLines = collect($spending)->filter(fn ($r) => ($r['budget'] ?? null) === null))
     @if ($budgeted > 0)

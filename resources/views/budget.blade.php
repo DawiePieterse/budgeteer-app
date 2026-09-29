@@ -4,6 +4,7 @@
 
 @section('content')
     <h1>Budget</h1>
+    <p class="small"><a href="{{ route('recurring.index') }}">Recurring payments ›</a></p>
     <p class="muted small">Amounts are per budget month ({{ $period->label() }} now). Spending over them shows on the home screen.</p>
 
     <form method="POST" action="{{ route('budget.update') }}">

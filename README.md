@@ -32,10 +32,15 @@ emails. Built with Laravel 12 for the Afrihost hosting that runs Bowls Buddy. Th
 - **Special projects** (for example a car rebuild): payments are kept out of the monthly budget and shown on
   the project's own page with their total, a month-by-month list and an optional project budget. A merchant
   can be sent to a project once from Categorise, and its later payments follow.
+- **Recurring payments:** debit orders and other payments expected every week, month or year. Each budget
+  month shows each one as paid, amount changed (with "expect the new amount from now on"), due, or late
+  (5 days after its date), and a late one can be marked paid elsewhere or skipped. Payments are linked by
+  words in their description as statements and emails come in, and payments that already recur are
+  suggested. The home screen lists anything late or changed.
 - **Settings:** household name, the day the budget month starts, the names on payments between your own
   accounts, and account names.
 
-Next: recurring payments.
+Next: notifications on the phone for late or changed payments and budget lines going over.
 
 ## Running it locally
 

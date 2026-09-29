@@ -12,6 +12,7 @@ use App\Models\Merchant;
 use App\Models\StatementImport;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Recurring\RecurringMatcher;
 use App\Statements\ParsedStatement;
 use App\Statements\StatementLine;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +38,7 @@ class StatementImporter
         private Classifier $classifier,
         private MerchantKey $merchantKey,
         private TransferPairer $pairer,
+        private RecurringMatcher $recurring,
     ) {}
 
     public function alreadyImported(ParsedStatement $statement, Household $household): ?StatementImport
@@ -160,6 +162,7 @@ class StatementImporter
             }
 
             $this->pairer->pair($household->id);
+            $this->recurring->link($household->id);
 
             return $import;
         });

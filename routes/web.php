@@ -9,6 +9,7 @@ use App\Http\Controllers\GmailController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\RecurringController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StatementController;
 use App\Http\Controllers\TransactionController;
@@ -52,6 +53,13 @@ Route::middleware(['auth', 'throttle:120,1'])->group(function () {
     Route::post('/budget/merge', [BudgetController::class, 'merge'])->name('budget.merge');
     Route::post('/budget/reset', [BudgetController::class, 'reset'])->name('budget.reset');
     Route::post('/budget/tidy', [BudgetController::class, 'tidy'])->name('budget.tidy');
+
+    Route::get('/recurring', [RecurringController::class, 'index'])->name('recurring.index');
+    Route::post('/recurring', [RecurringController::class, 'store'])->name('recurring.store');
+    Route::post('/recurring/{recurring}', [RecurringController::class, 'update'])->name('recurring.update');
+    Route::post('/recurring/{recurring}/delete', [RecurringController::class, 'destroy'])->name('recurring.destroy');
+    Route::post('/recurring/{recurring}/mark', [RecurringController::class, 'mark'])->name('recurring.mark');
+    Route::post('/recurring/{recurring}/use-amount/{transaction}', [RecurringController::class, 'useAmount'])->name('recurring.use-amount');
 
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');

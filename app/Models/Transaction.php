@@ -29,6 +29,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $category_id
  * @property int|null $person_id
  * @property int|null $project_id
+ * @property int|null $recurring_payment_id
  * @property bool $is_transfer
  * @property int|null $transfer_pair_id
  * @property int|null $balance_after_cents
@@ -42,7 +43,7 @@ class Transaction extends Model
 
     protected $fillable = [
         'household_id', 'account_id', 'card_id', 'source', 'statement_import_id', 'posted_on', 'occurred_at', 'description',
-        'bank_type', 'merchant_key', 'amount_cents', 'currency', 'kind', 'category_id', 'person_id', 'project_id', 'is_transfer',
+        'bank_type', 'merchant_key', 'amount_cents', 'currency', 'kind', 'category_id', 'person_id', 'project_id', 'recurring_payment_id', 'is_transfer',
         'transfer_pair_id', 'balance_after_cents', 'line_on_statement', 'updated_by',
     ];
 
@@ -67,6 +68,12 @@ class Transaction extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /** @return BelongsTo<RecurringPayment, $this> */
+    public function recurringPayment(): BelongsTo
+    {
+        return $this->belongsTo(RecurringPayment::class);
     }
 
     /** @return BelongsTo<Project, $this> */
