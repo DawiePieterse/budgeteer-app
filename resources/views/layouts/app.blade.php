@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0f766e">
     <title>@yield('title', 'Budgeteer')</title>
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=1">
+    <link rel="stylesheet" href="{{ versioned_asset('css/app.css') }}">
 </head>
 <body>
     <header class="top">

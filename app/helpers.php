@@ -9,3 +9,13 @@ if (! function_exists('money')) {
         return Money::format($cents);
     }
 }
+
+if (! function_exists('versioned_asset')) {
+    /** The asset's URL with its last change time, so browsers fetch a new copy after every update. */
+    function versioned_asset(string $path): string
+    {
+        $file = public_path($path);
+
+        return asset($path).'?v='.(is_file($file) ? filemtime($file) : '0');
+    }
+}

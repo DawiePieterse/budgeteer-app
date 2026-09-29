@@ -62,5 +62,5 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/autosubmit.js') }}?v=1" defer></script>
+    <script src="{{ versioned_asset('js/autosubmit.js') }}" defer></script>
 @endpush

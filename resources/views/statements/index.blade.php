@@ -39,5 +39,5 @@
 @endsection
 
 @push('scripts')
-    <script type="module" src="{{ asset('js/statement-upload.js') }}?v=1"></script>
+    <script type="module" src="{{ versioned_asset('js/statement-upload.js') }}"></script>
 @endpush
