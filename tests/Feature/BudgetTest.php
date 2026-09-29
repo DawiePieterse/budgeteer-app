@@ -1,9 +1,11 @@
 <?php
 
 use App\Enums\TransactionKind;
+use App\Http\Controllers\CategoriseController;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Merchant;
+use App\Models\Project;
 use App\Models\Transaction;
 use App\Services\HouseholdSetup;
 
@@ -99,4 +101,47 @@ it('keeps budgets to their own household', function () {
     $this->post('/budget/merge', ['from' => $theirCategory->id, 'into' => Category::first()->id])->assertSessionHasErrors('from');
 
     expect($theirCategory->fresh()->name)->not->toBe('Hacked');
+});
+
+it('starts the spending categories again from a pasted budget, keeping transactions', function () {
+    $user = member();
+    $this->actingAs($user);
+    $account = Account::factory()->create(['household_id' => $user->household_id]);
+    $groceries = Category::where('name', 'Groceries')->sole();
+    $consulting = Category::where('name', 'Consulting')->sole();
+    $spend = Transaction::factory()->for($account)->create(['category_id' => $groceries->id]);
+    $income = Transaction::factory()->for($account)->create(['amount_cents' => 500000, 'category_id' => $consulting->id]);
+    Merchant::create(['key' => 'WOOLWORTHS', 'category_id' => $groceries->id]);
+    $project = Project::create(['name' => 'Shrek']);
+    Merchant::create(['key' => 'GRAND SLAM', 'project_id' => $project->id]);
+
+    $this->post('/budget/reset', ['list' => "Everyday food\t10000\nPPS (life cover / risk component)\t6000"])->assertSessionHasErrors('confirm');
+    $this->post('/budget/reset', ['list' => "Everyday food\t10000\nPPS (life cover / risk component)\t6000", 'confirm' => '1'])->assertRedirect('/categorise');
+
+    expect(Category::where('kind', 'expense')->pluck('name')->all())->toBe(['Everyday food', 'PPS (life cover / risk component)'])
+        ->and(Category::where('kind', 'income')->count())->toBe(4)
+        ->and(Transaction::count())->toBe(2)
+        ->and($spend->fresh()->category_id)->toBeNull()
+        ->and($income->fresh()->category_id)->toBe($consulting->id)
+        ->and(Merchant::where('key', 'WOOLWORTHS')->exists())->toBeFalse()
+        ->and(Merchant::where('key', 'GRAND SLAM')->sole()->project_id)->toBe($project->id);
+});
+
+it('suggests the budget line whose name matches the merchant', function () {
+    $user = member();
+    $this->actingAs($user);
+    $cats = collect([
+        Category::create(['name' => 'PPS (life cover / risk component)', 'kind' => 'expense']),
+        Category::create(['name' => 'Afrihost internet and cellphones', 'kind' => 'expense']),
+        Category::create(['name' => 'Church (NG Kerk)', 'kind' => 'expense']),
+        Category::create(['name' => 'AutoGen', 'kind' => 'expense']),
+        Category::create(['name' => 'Everyday food items & household basics', 'kind' => 'expense']),
+    ]);
+
+    $suggest = fn (string $key, string $example = '') => CategoriseController::suggest($key, $example, $cats);
+    expect($suggest('PPS', 'PPS 12345 0XYU3D'))->toBe($cats[0]->id)
+        ->and($suggest('AFRIHOST', 'AFRIHOST.COM'))->toBe($cats[1]->id)
+        ->and($suggest('NG KERK', 'NG KERK LANGEBAAN DANKOFFER'))->toBe($cats[2]->id)
+        ->and($suggest('AUTOGENVAPPAG', 'AUTOGENVAPPAG1234 MAY 2026'))->toBe($cats[3]->id)
+        ->and($suggest('WOOLWORTHS', 'WOOLWORTHS BELLVILLE'))->toBeNull();
 });

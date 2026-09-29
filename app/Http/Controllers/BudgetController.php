@@ -88,6 +88,36 @@ class BudgetController extends Controller
         return back()->with('status', count($items)." budget lines read ({$created} new categories), R".number_format($total / 100, 2, '.', ',').' a month in all. Now move the starter categories you no longer need into yours, below.');
     }
 
+    /**
+     * Starts the spending categories again from a pasted budget: every spending category and every
+     * remembered merchant choice goes, all transactions are uncategorised (transactions themselves
+     * stay), and each budget line becomes a category. Money-in categories and projects are kept.
+     */
+    public function reset(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'list' => ['required', 'string', 'max:20000'],
+            'confirm' => ['accepted'],
+        ]);
+        $items = BudgetList::parse($request->string('list'));
+        if ($items === []) {
+            return back()->with('error', 'No lines with an amount were found, so nothing was changed.');
+        }
+
+        DB::transaction(function () use ($items) {
+            $spending = Category::query()->where('kind', CategoryKind::Expense)->pluck('id');
+            Transaction::query()->whereNotNull('category_id')->whereIn('category_id', $spending)->update(['category_id' => null]);
+            Merchant::query()->whereNull('project_id')->delete();
+            Merchant::query()->update(['category_id' => null]);
+            Category::query()->whereIn('id', $spending)->delete();
+            foreach ($items as $sort => $item) {
+                Category::create(['name' => mb_substr($item['name'], 0, 100), 'kind' => CategoryKind::Expense, 'budget_cents' => $item['cents'], 'sort' => $sort]);
+            }
+        });
+
+        return redirect()->route('categorise')->with('status', count($items).' budget lines are now your categories. Assign each group below; Budgeteer suggests a line where the names match.');
+    }
+
     /** Moves everything in one category into another and removes the first. */
     public function merge(Request $request): RedirectResponse
     {

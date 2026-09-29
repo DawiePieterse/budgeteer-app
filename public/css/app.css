@@ -174,3 +174,4 @@ progress.over-bar { accent-color: var(--out); }
     .meter-track { fill: Canvas; stroke: CanvasText; }
     .meter-fill { fill: Highlight; }
 }
+select.suggested { border-color: var(--accent); }

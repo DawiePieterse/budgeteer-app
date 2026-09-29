@@ -50,6 +50,7 @@ Route::middleware(['auth', 'throttle:120,1'])->group(function () {
     Route::post('/budget', [BudgetController::class, 'update'])->name('budget.update');
     Route::post('/budget/paste', [BudgetController::class, 'paste'])->name('budget.paste');
     Route::post('/budget/merge', [BudgetController::class, 'merge'])->name('budget.merge');
+    Route::post('/budget/reset', [BudgetController::class, 'reset'])->name('budget.reset');
     Route::post('/budget/tidy', [BudgetController::class, 'tidy'])->name('budget.tidy');
 
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');

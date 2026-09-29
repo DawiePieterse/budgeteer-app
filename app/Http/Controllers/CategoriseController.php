@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\Transaction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -34,6 +35,11 @@ class CategoriseController extends Controller
             ->orderByRaw('abs(sum(amount_cents)) desc')
             ->limit(30)
             ->get();
+
+        $spendingCategories = Category::query()->where('kind', 'expense')->get();
+        $groups->each(function ($group) use ($spendingCategories) {
+            $group->suggested = $group->money_in ? null : self::suggest((string) $group->merchant_key, (string) $group->example, $spendingCategories);
+        });
 
         return view('categorise', [
             'groups' => $groups,
@@ -81,5 +87,31 @@ class CategoriseController extends Controller
         $merchant->fill(['category_id' => (int) $data['category'], 'times_confirmed' => $merchant->times_confirmed + 1])->save();
 
         return back()->with('status', "{$count} ".($count === 1 ? 'transaction' : 'transactions').' categorised.');
+    }
+
+    /**
+     * The budget line whose name shares a distinctive word with the merchant, for example PPS with
+     * "PPS (life cover / risk component)" or AFRIHOST with "Afrihost internet and cellphones".
+     *
+     * @param  Collection<int, Category>  $categories
+     */
+    public static function suggest(string $key, string $example, $categories): ?int
+    {
+        $words = fn (string $text) => array_filter(
+            preg_split('/[^\p{L}\p{N}]+/u', mb_strtoupper($text)) ?: [],
+            fn (string $w) => mb_strlen($w) >= 3 && ! in_array($w, ['THE', 'AND', 'FOR', 'VAN', 'DIE', 'CAPE', 'TOWN', 'PTY', 'LTD', 'SERVICES', 'PAYMENT', 'MONTHLY'], true),
+        );
+        $merchant = array_unique([...$words($key), ...array_slice(array_values($words($example)), 0, 3)]);
+        foreach ($categories as $category) {
+            foreach ($words($category->name) as $word) {
+                foreach ($merchant as $m) {
+                    if ($m === $word || (mb_strlen($word) >= 5 && str_starts_with($m, $word)) || (mb_strlen($m) >= 5 && str_starts_with($word, $m))) {
+                        return $category->id;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 }

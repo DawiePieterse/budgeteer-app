@@ -87,6 +87,16 @@
         <button type="submit" class="secondary">Move</button>
     </form>
 
+    <form method="POST" action="{{ route('budget.reset') }}" class="card">
+        @csrf
+        <h2>Start again from my budget</h2>
+        <p class="muted small">Replaces <strong>all spending categories</strong> with these lines and forgets which shop goes where, so every transaction is categorised again. Transactions, money-in categories, projects and what people owe are kept.</p>
+        <label class="visually-hidden" for="reset-list">Budget lines</label>
+        <textarea name="list" id="reset-list" rows="8" required placeholder="Everyday food items &amp; household basics    10000&#10;Petrol &amp; tolls    4000"></textarea>
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> Yes, replace my spending categories</label>
+        <button type="submit" class="secondary">Replace categories</button>
+    </form>
+
     <form method="POST" action="{{ route('budget.tidy') }}" class="card">
         @csrf
         <h2>Tidy up</h2>

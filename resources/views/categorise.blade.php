@@ -27,12 +27,12 @@
             </div>
             <div class="inline">
                 <label class="visually-hidden" for="category-{{ $loop->index }}">Category</label>
-                <select name="category" id="category-{{ $loop->index }}" required>
+                <select name="category" id="category-{{ $loop->index }}" required @class(['suggested' => $group->suggested ?? null])>
                     <option value="">Choose…</option>
                     @foreach (['expense' => 'Spending', 'income' => 'Money in'] as $kind => $label)
                         <optgroup label="{{ $label }}">
                             @foreach ($categories[$kind] ?? [] as $category)
-                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                <option value="{{ $category->id }}" @selected(($group->suggested ?? null) === $category->id)>{{ $category->name }}</option>
                             @endforeach
                         </optgroup>
                     @endforeach
