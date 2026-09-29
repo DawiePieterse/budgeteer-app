@@ -67,3 +67,16 @@ it('keeps each household to its own data', function () {
 
     expect($theirAccount->fresh()->name)->toBe('Their account');
 });
+
+it('filters transactions by budget line, or those not categorised', function () {
+    $user = member();
+    $account = Account::factory()->create(['household_id' => $user->household_id]);
+    $groceries = Category::withoutGlobalScopes()->where('household_id', $user->household_id)->where('name', 'Groceries')->sole();
+    Transaction::factory()->for($account)->create(['description' => 'WOOLWORTHS BELLVILLE', 'category_id' => $groceries->id]);
+    Transaction::factory()->for($account)->create(['description' => 'TAKEALOT', 'category_id' => null]);
+
+    $this->actingAs($user)->get("/transactions?category={$groceries->id}")
+        ->assertSee('WOOLWORTHS BELLVILLE')->assertDontSee('TAKEALOT')->assertSee('All categories')
+        ->assertSee('1 transaction')->assertSee('-R123.45');
+    $this->get('/transactions?category=none')->assertSee('TAKEALOT')->assertDontSee('WOOLWORTHS BELLVILLE');
+});

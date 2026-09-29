@@ -203,3 +203,6 @@ select.suggested { border-color: var(--accent); }
 .summary-line { display: flex; justify-content: space-between; gap: 1rem; margin: 0 0 0.75rem; padding: 0 0.25rem;
     font-size: 0.9rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .summary-line strong { margin-left: 0.25rem; }
+.filters { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem; }
+.filters input[type=search] { grid-column: 1 / -1; }
+.filters button { margin-top: 0; }

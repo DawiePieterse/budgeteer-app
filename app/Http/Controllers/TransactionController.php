@@ -20,7 +20,9 @@ class TransactionController extends Controller
         if ($request->filled('account')) {
             $query->where('account_id', $request->integer('account'));
         }
-        if ($request->filled('category')) {
+        if ($request->input('category') === 'none') {
+            $query->whereNull('category_id')->where('is_transfer', false)->whereNull('person_id')->whereNull('project_id');
+        } elseif ($request->filled('category')) {
             $query->where('category_id', $request->integer('category'));
         }
         if ($request->filled('from') && $request->filled('to')) {
@@ -30,10 +32,14 @@ class TransactionController extends Controller
             $query->where('description', 'like', '%'.str_replace(['%', '_'], ['\%', '\_'], $request->string('q')).'%');
         }
 
+        $filtered = $request->hasAny(['category', 'account', 'q', 'from']) && collect($request->only(['category', 'account', 'q', 'from']))->filter()->isNotEmpty();
+
         return view('transactions.index', [
+            'total' => $filtered ? ['count' => (clone $query)->count(), 'cents' => (int) (clone $query)->sum('amount_cents')] : null,
             'transactions' => $query->paginate(50)->withQueryString(),
             'accounts' => Account::query()->get(),
-            'category' => $request->filled('category') ? Category::query()->find($request->integer('category')) : null,
+            'category' => $request->filled('category') && $request->input('category') !== 'none' ? Category::query()->find($request->integer('category')) : null,
+            'categories' => Category::query()->orderBy('kind')->orderBy('sort')->orderBy('name')->get()->groupBy(fn (Category $c) => $c->kind->value),
         ]);
     }
 
