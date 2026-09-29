@@ -80,3 +80,18 @@ it('filters transactions by budget line, or those not categorised', function () 
         ->assertSee('1 transaction')->assertSee('-R123.45');
     $this->get('/transactions?category=none')->assertSee('TAKEALOT')->assertDontSee('WOOLWORTHS BELLVILLE');
 });
+
+it('filters transactions by budget month', function () {
+    $user = member();
+    $account = Account::factory()->create(['household_id' => $user->household_id]);
+    Transaction::factory()->for($account)->create(['posted_on' => '2026-07-10', 'description' => 'JULY SHOP']);
+    Transaction::factory()->for($account)->create(['posted_on' => '2026-08-10', 'description' => 'AUGUST SHOP']);
+
+    $this->actingAs($user)->get('/transactions?month=2026-07-01')
+        ->assertSee('JULY SHOP')->assertDontSee('AUGUST SHOP')
+        ->assertSee('July 2026')->assertSee('August 2026')->assertSee('All months');
+
+    // A household whose budget month starts on the 25th.
+    $user->household->update(['period_start_day' => 25]);
+    $this->get('/transactions?month=2026-07-25')->assertSee('AUGUST SHOP')->assertDontSee('JULY SHOP');
+});

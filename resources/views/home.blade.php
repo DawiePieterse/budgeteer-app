@@ -27,13 +27,13 @@
     @php($budgetLines = collect($spending)->filter(fn ($r) => ($r['budget'] ?? null) !== null))
     @php($otherLines = collect($spending)->filter(fn ($r) => ($r['budget'] ?? null) === null))
     @if ($budgeted > 0)
-        @php($lineLink = fn ($row) => route('transactions.index', ['category' => $row['id'], 'from' => $period->from->toDateString(), 'to' => $period->to->toDateString()]))
+        @php($lineLink = fn ($row) => route('transactions.index', ['category' => $row['id'], 'month' => $period->from->toDateString()]))
         {{-- Lines over budget or at least 80% used show; the rest are one tap away. --}}
         @php($watch = $budgetLines->filter(fn ($r) => $r['budget'] > 0 ? $r['cents'] / $r['budget'] >= 0.8 : $r['cents'] > 0))
         @php($onTrack = $budgetLines->diffKeys($watch))
         <section class="card">
             <h2>Budget <a class="small" href="{{ route('budget') }}">Change ›</a></h2>
-            <x-budget-bar class="total" :spent="(int) $budgetLines->sum('cents')" :budget="$budgeted" label="All budget lines" />
+            <x-budget-line class="total" :spent="(int) $budgetLines->sum('cents')" :budget="$budgeted" label="All budget lines" />
             @foreach ($watch as $row)
                 <x-budget-line :spent="$row['cents']" :budget="$row['budget']" :label="$row['name']" :href="$lineLink($row)" />
             @endforeach

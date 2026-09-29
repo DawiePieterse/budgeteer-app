@@ -7,6 +7,8 @@ use App\Models\Category;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\Transaction;
+use App\Services\BudgetPeriod;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -25,22 +27,52 @@ class TransactionController extends Controller
         } elseif ($request->filled('category')) {
             $query->where('category_id', $request->integer('category'));
         }
-        if ($request->filled('from') && $request->filled('to')) {
+        // A budget month, given by its first day; the home screen links here with one.
+        $household = $request->user()->household;
+        $months = $this->months($household->period_start_day);
+        $month = $request->filled('month') ? BudgetPeriod::containing(CarbonImmutable::parse($request->string('month')), $household->period_start_day) : null;
+        if ($month !== null) {
+            $query->whereBetween('posted_on', [$month->from->toDateString(), $month->to->toDateString()]);
+        } elseif ($request->filled('from') && $request->filled('to')) {
             $query->whereBetween('posted_on', [$request->date('from')->toDateString(), $request->date('to')->toDateString()]);
         }
         if ($request->filled('q')) {
             $query->where('description', 'like', '%'.str_replace(['%', '_'], ['\%', '\_'], $request->string('q')).'%');
         }
 
-        $filtered = $request->hasAny(['category', 'account', 'q', 'from']) && collect($request->only(['category', 'account', 'q', 'from']))->filter()->isNotEmpty();
+        $filtered = collect($request->only(['category', 'account', 'q', 'from', 'month']))->filter()->isNotEmpty();
 
         return view('transactions.index', [
             'total' => $filtered ? ['count' => (clone $query)->count(), 'cents' => (int) (clone $query)->sum('amount_cents')] : null,
             'transactions' => $query->paginate(50)->withQueryString(),
             'accounts' => Account::query()->get(),
+            'months' => $months,
+            'month' => $month,
             'category' => $request->filled('category') && $request->input('category') !== 'none' ? Category::query()->find($request->integer('category')) : null,
             'categories' => Category::query()->orderBy('kind')->orderBy('sort')->orderBy('name')->get()->groupBy(fn (Category $c) => $c->kind->value),
         ]);
+    }
+
+    /**
+     * Budget months from the first transaction to now, newest first.
+     *
+     * @return list<BudgetPeriod>
+     */
+    private function months(int $startDay): array
+    {
+        $first = Transaction::query()->min('posted_on');
+        if ($first === null) {
+            return [];
+        }
+        $months = [];
+        $period = BudgetPeriod::containing(CarbonImmutable::today(), $startDay);
+        $stop = BudgetPeriod::containing(CarbonImmutable::parse($first), $startDay)->from;
+        while ($period->from->greaterThanOrEqualTo($stop) && count($months) < 60) {
+            $months[] = $period;
+            $period = $period->previous();
+        }
+
+        return $months;
     }
 
     public function edit(Transaction $transaction): View

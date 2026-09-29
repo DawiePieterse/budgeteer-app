@@ -63,7 +63,7 @@ it('keeps projects to their own household', function () {
     $this->post('/categorise', ['merchant_key' => 'X', 'money_in' => 0, 'category' => 'project:'.$project->id])->assertSessionHasErrors('category');
 });
 
-it('draws each budget line as a meter against 100% of its budget', function () {
+it('shows each budget line as spent of budget, with what is over and the percentage', function () {
     $user = member();
     $account = Account::factory()->create(['household_id' => $user->household_id]);
     $food = Category::withoutGlobalScopes()->where('household_id', $user->household_id)->where('name', 'Groceries')->sole();
@@ -73,6 +73,7 @@ it('draws each budget line as a meter against 100% of its budget', function () {
     $this->actingAs($user)->get('/?in=2026-07-15')
         ->assertSee('114%')
         ->assertSee('R1,425.00 over')
-        ->assertSee('Groceries: R11,425.00 of R10,000.00 (114%), R1,425.00 over')   // the chart's text alternative
-        ->assertSee('width="100"', false);                                          // fill capped at the full budget
+        ->assertSee('Groceries: R11,425.00 of R10,000.00 (114%), R1,425.00 over')   // read out by screen readers
+        ->assertSee('of R10,000.00')
+        ->assertDontSee('<svg', false);                                             // no bars on the home screen
 });
