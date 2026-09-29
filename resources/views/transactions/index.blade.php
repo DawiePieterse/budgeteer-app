@@ -44,9 +44,18 @@
         <p class="summary-line"><span>{{ $total['count'] }} {{ $total['count'] === 1 ? 'transaction' : 'transactions' }}</span><span>Total <strong @class(['in' => $total['cents'] > 0])>{{ money($total['cents']) }}</strong></span></p>
     @endif
 
+    @if ($owners->isNotEmpty())
+        <p class="owner-key small">
+            <span class="owner-chip owner-green">Ours</span>
+            @foreach ($owners as $owner)
+                <span class="owner-chip owner-{{ $owner->ownerColour() }}">{{ $owner->name }}</span>
+            @endforeach
+        </p>
+    @endif
+
     <section class="card">
         @forelse ($transactions as $t)
-            <a class="row" href="{{ route('transactions.edit', $t) }}">
+            <a class="row owned owner-{{ $t->ownerColour() ?? 'none' }}" href="{{ route('transactions.edit', $t) }}">
                 <span>
                     {{ $t->description }}
                     @if ($t->order)
@@ -54,7 +63,7 @@
                     @endif
                     <span class="muted small block">
                         {{ $t->posted_on->format('j M Y') }} · {{ $t->account->name }} ·
-                        @if ($t->is_transfer) Own accounts @elseif ($t->project) Project: {{ $t->project->name }} @elseif ($t->person) {{ $t->person->name }} @else {{ $t->category->name ?? 'Not categorised' }} @endif
+                        @if ($t->is_transfer) Own accounts @elseif ($t->project) Project: <span class="owner-name">{{ $t->project->name }}</span> @elseif ($t->person) <span class="owner-name">{{ $t->person->name }}</span> @else {{ $t->category->name ?? 'Not categorised' }} @endif
                     </span>
                 </span>
                 <span @class(['amount', 'in' => $t->amount_cents > 0, 'muted' => $t->is_transfer])>{{ money($t->amount_cents) }}</span>

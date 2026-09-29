@@ -51,7 +51,7 @@ it('moves a single transaction into a project', function () {
     $this->post("/transactions/{$t->id}", ['project_id' => $shrek->id, 'is_transfer' => 0])->assertRedirect();
 
     expect($t->fresh()->project_id)->toBe($shrek->id);
-    $this->get('/transactions')->assertSee('Project: Shrek');
+    $this->get('/transactions')->assertSee('Project: <span class="owner-name">Shrek</span>', false);
 });
 
 it('keeps projects to their own household', function () {

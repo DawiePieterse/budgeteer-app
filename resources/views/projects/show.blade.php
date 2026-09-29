@@ -57,6 +57,7 @@
             <span><label for="name">Name</label><input type="text" name="name" id="name" value="{{ $project->name }}" maxlength="100" required></span>
             <span><label for="budget">Total budget (R)</label><input type="number" name="budget" id="budget" step="0.01" min="0" value="{{ $project->budget_cents !== null ? number_format($project->budget_cents / 100, 2, '.', '') : '' }}" placeholder="Optional"></span>
         </div>
+        <x-colour-pick :current="$project->ownerColour()" />
         <button type="submit">Save</button>
     </form>
 @endsection

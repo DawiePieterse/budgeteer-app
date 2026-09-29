@@ -8,8 +8,10 @@ use App\Models\Settlement;
 use App\Models\Transaction;
 use App\Services\PersonBalance;
 use App\Statements\Money;
+use App\Support\OwnerColours;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class PersonController extends Controller
@@ -44,6 +46,7 @@ class PersonController extends Controller
             'opening_balance' => ['required', 'numeric', 'between:-10000000,10000000'],
             'opening_balance_on' => ['nullable', 'date'],
             'payment_reference' => ['nullable', 'string', 'max:100'],
+            'colour' => ['nullable', Rule::in(array_keys(OwnerColours::CHOICES))],
         ]);
 
         $opening = (int) round(((float) $data['opening_balance']) * 100);
@@ -57,6 +60,7 @@ class PersonController extends Controller
             'opening_balance_cents' => $opening,
             'opening_balance_on' => $data['opening_balance_on'] ?? null,
             'payment_reference' => $data['payment_reference'] ?? null,
+            'colour' => $data['colour'] ?? $person->colour,
         ]);
 
         return back()->with('status', 'Saved.');

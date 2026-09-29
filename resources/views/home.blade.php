@@ -121,7 +121,7 @@
             <h2>Owed to us <span class="muted small">{{ money($owedToUs->sum('cents')) }}</span></h2>
             @foreach ($owedToUs as $row)
                 <a class="row" href="{{ route('people.show', $row['person']) }}">
-                    <span>{{ $row['person']->name }}</span>
+                    <span><span class="owner-dot owner-{{ $row['person']->ownerColour() }}" aria-hidden="true"></span>{{ $row['person']->name }}</span>
                     <span @class(['amount', 'out' => $row['cents'] > 0])>{{ money($row['cents']) }} ›</span>
                 </a>
             @endforeach

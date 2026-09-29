@@ -55,6 +55,7 @@ class TransactionController extends Controller
         return view('transactions.index', [
             'total' => $filtered ? ['count' => (clone $query)->count(), 'cents' => (int) (clone $query)->sum('amount_cents')] : null,
             'transactions' => $query->paginate(50)->withQueryString(),
+            'owners' => Person::query()->orderBy('name')->get()->concat(Project::query()->orderBy('name')->get()),
             'accounts' => Account::query()->get(),
             'months' => $months,
             'month' => $month,

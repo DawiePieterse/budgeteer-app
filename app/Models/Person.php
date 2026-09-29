@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToHousehold;
+use App\Models\Concerns\HasOwnerColour;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
@@ -13,6 +14,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $household_id
  * @property string $name
+ * @property string|null $colour
  * @property string|null $phone
  * @property int $opening_balance_cents
  * @property Carbon|null $opening_balance_on
@@ -20,11 +22,11 @@ use Illuminate\Support\Carbon;
  */
 class Person extends Model
 {
-    use BelongsToHousehold;
+    use BelongsToHousehold, HasOwnerColour;
 
     protected $table = 'people';
 
-    protected $fillable = ['household_id', 'name', 'phone', 'opening_balance_cents', 'opening_balance_on', 'payment_reference'];
+    protected $fillable = ['household_id', 'name', 'colour', 'phone', 'opening_balance_cents', 'opening_balance_on', 'payment_reference'];
 
     protected function casts(): array
     {

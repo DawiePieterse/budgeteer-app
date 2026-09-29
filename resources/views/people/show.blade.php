@@ -126,6 +126,8 @@
         <label for="phone">Cellphone, for WhatsApp</label>
         <input type="text" name="phone" id="phone" value="{{ old('phone', $person->phone) }}" maxlength="30" inputmode="tel">
 
+        <x-colour-pick :current="$person->ownerColour()" />
+
         <button type="submit">Save</button>
     </form>
 @endsection

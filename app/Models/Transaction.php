@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\TransactionKind;
 use App\Enums\TransactionSource;
 use App\Models\Concerns\BelongsToHousehold;
+use App\Support\OwnerColours;
 use Database\Factories\TransactionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -98,6 +99,17 @@ class Transaction extends Model
     public function card(): BelongsTo
     {
         return $this->belongsTo(Card::class);
+    }
+
+    /** Whose it is, as a colour: the person's or project's, green for the household's own, none for a transfer. */
+    public function ownerColour(): ?string
+    {
+        return match (true) {
+            $this->is_transfer => null,
+            $this->project_id !== null => $this->project?->ownerColour(),
+            $this->person_id !== null => $this->person?->ownerColour(),
+            default => OwnerColours::HOUSEHOLD,
+        };
     }
 
     /**

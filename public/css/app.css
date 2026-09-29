@@ -22,6 +22,15 @@
     --circle-ink: #134e48;
     --circle-over-fill: #f4c7c7;
     --circle-over-ring: #d03b3b;
+    /* Whose a transaction is: the dataviz categorical palette (red left out, it means over budget).
+       Always shown with the name beside it, so colour never carries the meaning alone. */
+    --owner-green: #008300;
+    --owner-pink: #e87ba4;
+    --owner-blue: #2a78d6;
+    --owner-orange: #eb6834;
+    --owner-aqua: #1baf7a;
+    --owner-violet: #4a3aa7;
+    --owner-yellow: #eda100;
     color-scheme: light;
 }
 
@@ -48,6 +57,13 @@
         --circle-ink: #e6eced;
         --circle-over-fill: #7a2e2e;
         --circle-over-ring: #e66767;
+        --owner-green: #008300;
+        --owner-pink: #d55181;
+        --owner-blue: #3987e5;
+        --owner-orange: #d95926;
+        --owner-aqua: #199e70;
+        --owner-violet: #9085e9;
+        --owner-yellow: #c98500;
         color-scheme: dark;
     }
 }
@@ -267,3 +283,24 @@ select.suggested { border-color: var(--accent); }
 .circle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
 .icon-pick { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.3rem; color: var(--circle-ink); }
 .icon-pick select { flex: 1; padding: 0.3rem; font-size: 0.85rem; }
+
+/* Whose a transaction is: a stripe on the left of the row, and a dot beside the name */
+.owner-green { --owner: var(--owner-green); }
+.owner-pink { --owner: var(--owner-pink); }
+.owner-blue { --owner: var(--owner-blue); }
+.owner-orange { --owner: var(--owner-orange); }
+.owner-aqua { --owner: var(--owner-aqua); }
+.owner-violet { --owner: var(--owner-violet); }
+.owner-yellow { --owner: var(--owner-yellow); }
+.owner-none { --owner: transparent; }
+.row.owned { box-shadow: inset 5px 0 0 var(--owner); padding-left: 0.75rem; }
+.owner-name { font-weight: 600; color: var(--text); }
+.owner-key { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 0.6rem; }
+.owner-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.15rem 0.6rem; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--text); font-weight: 400; }
+.owner-chip::before, .owner-dot { content: ""; display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; background: var(--owner); flex: none; }
+.owner-dot { margin-right: 0.45rem; vertical-align: -0.05rem; }
+.colour-pick { border: 0; padding: 0; margin: 0.75rem 0 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.colour-pick legend { font-weight: 600; margin-bottom: 0.35rem; padding: 0; }
+.colour-pick input { margin: 0; width: auto; }
+.colour-pick .owner-chip { cursor: pointer; }
+.colour-pick .owner-chip:has(input:checked) { border-color: var(--owner); box-shadow: 0 0 0 1px var(--owner); font-weight: 600; }

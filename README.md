@@ -37,6 +37,9 @@ emails. Built with Laravel 12 for the Afrihost hosting that runs Bowls Buddy. Th
   (5 days after its date), and a late one can be marked paid elsewhere or skipped. Payments are linked by
   words in their description as statements and emails come in, and payments that already recur are
   suggested. The home screen lists anything late or changed.
+- **Colours by whose it is:** on Transactions each row has a coloured stripe: green for the household's
+  own budget, and each person who pays back and each special project their own colour (pink, blue,
+  orange, aqua, violet, yellow, handed out in turn and changeable on their page), with the name beside it.
 - **Budget circles:** the home screen shows the budget as a ring (all budget lines: spent of budget)
   and a circle per line, filled from the bottom with the share used, with what is left under it; over
   budget turns red. **List** switches to the text lines; each phone remembers its choice. Each line has

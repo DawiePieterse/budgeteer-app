@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Merchant;
 use App\Models\Project;
 use App\Models\Transaction;
+use App\Support\OwnerColours;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ProjectController extends Controller
@@ -43,9 +45,11 @@ class ProjectController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'budget' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
+            'colour' => ['nullable', Rule::in(array_keys(OwnerColours::CHOICES))],
         ]);
         $project->update([
             'name' => trim($data['name']),
+            'colour' => $data['colour'] ?? $project->colour,
             'budget_cents' => filled($data['budget'] ?? null) ? (int) round(((float) $data['budget']) * 100) : null,
         ]);
 

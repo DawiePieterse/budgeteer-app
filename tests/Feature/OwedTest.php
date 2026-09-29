@@ -9,6 +9,7 @@ use App\Models\Card;
 use App\Models\Category;
 use App\Models\Merchant;
 use App\Models\Person;
+use App\Models\Project;
 use App\Models\Settlement;
 use App\Models\Transaction;
 use App\Services\PersonBalance;
@@ -209,4 +210,35 @@ it('needs a date only when something was owed before', function () {
     $this->post("/people/{$mary->id}", ['name' => 'Aunt Mary', 'opening_balance' => '0.00', 'opening_balance_on' => ''])->assertSessionHasNoErrors();
     $this->post("/people/{$mary->id}", ['name' => 'Aunt Mary', 'opening_balance' => '100', 'opening_balance_on' => ''])->assertSessionHasErrors('opening_balance_on');
     expect($mary->fresh()->opening_balance_on)->toBeNull();
+});
+
+it('colours each transaction by whose it is: ours green, each person and project their own', function () {
+    $user = member();
+    $account = Account::factory()->create(['household_id' => $user->household_id]);
+    $son = Person::create(['household_id' => $user->household_id, 'name' => 'Sam']);
+    $flat = Person::create(['household_id' => $user->household_id, 'name' => 'Laughing Waters']);
+    $car = Project::create(['household_id' => $user->household_id, 'name' => 'Car rebuild']);
+    expect([$son->colour, $flat->colour, $car->colour])->toBe(['pink', 'blue', 'orange']);   // handed out in turn
+
+    Transaction::factory()->for($account)->create(['description' => 'OURS SHOP']);
+    Transaction::factory()->for($account)->create(['description' => 'SAM SHOP', 'person_id' => $son->id]);
+    Transaction::factory()->for($account)->create(['description' => 'FLAT LEVY', 'person_id' => $flat->id]);
+    Transaction::factory()->for($account)->create(['description' => 'CAR PARTS', 'project_id' => $car->id]);
+    Transaction::factory()->for($account)->create(['description' => 'TO SAVINGS', 'is_transfer' => true]);
+    $this->actingAs($user);
+
+    $page = $this->get('/transactions')->assertOk()
+        ->assertSee('owner-chip owner-green">Ours', false)
+        ->assertSee('owner-chip owner-pink">Sam', false)
+        ->assertSee('owner-chip owner-blue">Laughing Waters', false);
+    foreach (['green' => 'OURS SHOP', 'pink' => 'SAM SHOP', 'blue' => 'FLAT LEVY', 'orange' => 'CAR PARTS', 'none' => 'TO SAVINGS'] as $colour => $description) {
+        expect($page->getContent())->toMatch('#class="row owned owner-'.$colour.'"[^>]*>\s*<span>\s*'.$description.'#');
+    }
+
+    $this->post("/people/{$flat->id}", ['name' => 'Laughing Waters', 'opening_balance' => '0', 'colour' => 'aqua'])->assertSessionHasNoErrors();
+    expect($flat->fresh()->colour)->toBe('aqua');
+    $this->post("/people/{$flat->id}", ['name' => 'Laughing Waters', 'opening_balance' => '0', 'colour' => 'red'])->assertSessionHasErrors('colour');
+    $this->post("/projects/{$car->id}", ['name' => 'Car rebuild', 'colour' => 'violet']);
+    expect($car->fresh()->colour)->toBe('violet');
+    $this->get("/people/{$flat->id}")->assertSee('Colour on transactions');
 });

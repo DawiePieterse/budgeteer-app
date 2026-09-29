@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToHousehold;
+use App\Models\Concerns\HasOwnerColour;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -10,13 +11,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property int $household_id
  * @property string $name
+ * @property string|null $colour
  * @property int|null $budget_cents
  */
 class Project extends Model
 {
-    use BelongsToHousehold;
+    use BelongsToHousehold, HasOwnerColour;
 
-    protected $fillable = ['household_id', 'name', 'budget_cents'];
+    protected $fillable = ['household_id', 'name', 'colour', 'budget_cents'];
 
     /** @return HasMany<Transaction, $this> */
     public function transactions(): HasMany
