@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\Transaction;
 use App\Services\BudgetList;
 use App\Services\BudgetPeriod;
+use App\Statements\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -137,13 +138,14 @@ class BudgetController extends Controller
             if ($kindKey !== null) {
                 Merchant::updateOrCreate(['key' => $kindKey], ['category_id' => $into->id]);
             }
-            if ($into->budget_cents === null && $from->budget_cents !== null) {
-                $into->update(['budget_cents' => $from->budget_cents]);
+            // The two budgets add up, so combining lines keeps the same total.
+            if ($from->budget_cents !== null) {
+                $into->update(['budget_cents' => (int) $into->budget_cents + $from->budget_cents]);
             }
             $from->delete();
         });
 
-        return back()->with('status', "\"{$from->name}\" is now part of \"{$into->name}\".");
+        return back()->with('status', "\"{$from->name}\" is now part of \"{$into->name}\"".($into->budget_cents !== null ? ', budget '.Money::format($into->budget_cents).'.' : '.'));
     }
 
     /** Removes categories that have no budget, no transactions and no remembered merchants. */

@@ -43,6 +43,7 @@ it('moves one category into another, with what it remembers', function () {
     $account = Account::factory()->create(['household_id' => $user->household_id]);
     $groceries = Category::where('name', 'Groceries')->sole();
     $food = Category::create(['name' => 'Everyday food', 'kind' => 'expense', 'budget_cents' => 1000000]);
+    $groceries->update(['budget_cents' => 50000]);
     $t = Transaction::factory()->for($account)->create(['category_id' => $groceries->id]);
     Merchant::create(['key' => 'WOOLWORTHS', 'category_id' => $groceries->id]);
 
@@ -50,7 +51,8 @@ it('moves one category into another, with what it remembers', function () {
 
     expect(Category::where('name', 'Groceries')->exists())->toBeFalse()
         ->and($t->fresh()->category_id)->toBe($food->id)
-        ->and(Merchant::where('key', 'WOOLWORTHS')->sole()->category_id)->toBe($food->id);
+        ->and(Merchant::where('key', 'WOOLWORTHS')->sole()->category_id)->toBe($food->id)
+        ->and($food->fresh()->budget_cents)->toBe(1050000); // budgets add up
 });
 
 it('keeps filing bank fees in the category the starter one was moved into', function () {

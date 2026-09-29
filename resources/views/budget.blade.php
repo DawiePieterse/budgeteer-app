@@ -71,7 +71,7 @@
     <form method="POST" action="{{ route('budget.merge') }}" class="card">
         @csrf
         <h2>Move one category into another</h2>
-        <p class="muted small">Everything in the first, and what Budgeteer remembers for it, moves to the second; the first is removed.</p>
+        <p class="muted small">Everything in the first, and what Budgeteer remembers for it, moves to the second, and the two budgets are added together; the first is removed. Rename the second above if it needs a broader name.</p>
         <label for="from">Move</label>
         <select name="from" id="from" required>
             @foreach ($categories as $category)
