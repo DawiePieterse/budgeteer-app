@@ -6,6 +6,9 @@
     <h1>Transactions</h1>
 
     <form method="GET" class="filters">
+        @if (request('merchant'))
+            <input type="hidden" name="merchant" value="{{ request('merchant') }}">
+        @endif
         <label class="visually-hidden" for="q">Search</label>
         <input type="search" name="q" id="q" value="{{ request('q') }}" placeholder="Search">
         <label class="visually-hidden" for="account">Account</label>

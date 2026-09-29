@@ -72,6 +72,7 @@ Route::middleware(['auth', 'throttle:120,1'])->group(function () {
     Route::get('/people/{person}', [PersonController::class, 'show'])->name('people.show');
     Route::post('/people/{person}', [PersonController::class, 'update'])->name('people.update');
     Route::post('/people/{person}/settlements', [PersonController::class, 'storeSettlement'])->name('people.settlements.store');
+    Route::post('/people/{person}/settlements/in-full', [PersonController::class, 'settleInFull'])->name('people.settlements.in-full');
     Route::post('/people/{person}/settlements/from/{transaction}', [PersonController::class, 'settleFromTransaction'])->name('people.settlements.from');
     Route::post('/people/{person}/settlements/{settlement}/delete', [PersonController::class, 'destroySettlement'])->name('people.settlements.destroy');
 

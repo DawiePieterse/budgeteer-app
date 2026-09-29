@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\TransactionKind;
 use App\Models\Category;
 use App\Models\Merchant;
+use App\Models\Person;
 use App\Models\Project;
 use App\Models\Transaction;
+use App\Services\PersonBalance;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -23,6 +25,11 @@ class CategoriseController extends Controller
 
     /** Choice value prefix for a project: "project:3". */
     public const PROJECT = 'project:';
+
+    /** Choice value prefix for a purchase someone will pay back: "person:2", or "person:new" with a name. */
+    public const PERSON = 'person:';
+
+    public const NEW_PERSON = self::PERSON.'new';
 
     public function index(): View
     {
@@ -46,6 +53,7 @@ class CategoriseController extends Controller
             'remaining' => Transaction::query()->whereNull('category_id')->where('is_transfer', false)->whereNull('person_id')->whereNull('project_id')->count(),
             'categories' => Category::query()->orderBy('kind')->orderBy('sort')->get()->groupBy(fn (Category $c) => $c->kind->value),
             'projects' => Project::query()->orderBy('name')->get(),
+            'people' => Person::query()->orderBy('name')->get(),
         ]);
     }
 
@@ -58,8 +66,11 @@ class CategoriseController extends Controller
                 self::TRANSFER,
                 ...Category::query()->pluck('id')->map(fn ($id) => (string) $id)->all(),
                 ...Project::query()->pluck('id')->map(fn ($id) => self::PROJECT.$id)->all(),
+                self::NEW_PERSON,
+                ...Person::query()->pluck('id')->map(fn ($id) => self::PERSON.$id)->all(),
             ])],
-        ]);
+            'new_person' => ['required_if:category,'.self::NEW_PERSON, 'nullable', 'string', 'max:100'],
+        ], ['new_person.required_if' => 'Type the name of the person who will pay you back.']);
 
         $transactions = Transaction::query()
             ->whereNull('category_id')
@@ -74,6 +85,16 @@ class CategoriseController extends Controller
             Merchant::updateOrCreate(['key' => $data['merchant_key']], ['project_id' => $project->id]);
 
             return back()->with('status', "{$count} moved to the {$project->name} project; later ones from the same place go there too.");
+        }
+
+        if (str_starts_with((string) $data['category'], self::PERSON)) {
+            // Only this purchase: the next one from the same shop is probably ours again, so nothing is remembered.
+            $person = $data['category'] === self::NEW_PERSON
+                ? Person::create(['name' => trim((string) $data['new_person']), 'opening_balance_cents' => 0, 'opening_balance_on' => null])
+                : Person::query()->findOrFail((int) substr((string) $data['category'], strlen(self::PERSON)));
+            $count = $transactions->update(['person_id' => $person->id, 'updated_by' => $request->user()->id]);
+
+            return back()->with('status', "{$count} charged to {$person->name}, out of the budget. {$person->name} now owes ".money(app(PersonBalance::class)->owed($person)).'.');
         }
 
         if ($data['category'] === self::TRANSFER) {

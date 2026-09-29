@@ -99,7 +99,7 @@
 
     @if ($owedToUs->isNotEmpty())
         <section class="card">
-            <h2>Owed to us</h2>
+            <h2>Owed to us <span class="muted small">{{ money($owedToUs->sum('cents')) }}</span></h2>
             @foreach ($owedToUs as $row)
                 <a class="row" href="{{ route('people.show', $row['person']) }}">
                     <span>{{ $row['person']->name }}</span>

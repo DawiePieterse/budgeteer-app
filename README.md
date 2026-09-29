@@ -37,6 +37,11 @@ emails. Built with Laravel 12 for the Afrihost hosting that runs Bowls Buddy. Th
   (5 days after its date), and a late one can be marked paid elsewhere or skipped. Payments are linked by
   words in their description as statements and emails come in, and payments that already recur are
   suggested. The home screen lists anything late or changed.
+- **Bought for someone else:** on a purchase, **Whose spending → Bought for …** (or **someone new…** with a
+  name) takes it out of the budget and adds it to what that person owes. Categorise offers the same for a
+  single purchase; a shop with several is opened one by one. Each person's page shows what they owe, a
+  WhatsApp reminder and **Paid it all back**; people who are all square drop off the home screen and stay
+  listed in Settings.
 - **Phone notifications:** each person turns them on per phone in Settings (Android in the browser; iPhone
   after Add to Home Screen) and picks what to hear about: a recurring payment late or its amount changed, a
   budget line at 80% or over (and the whole budget over), and bank emails stopped because Gmail needs linking

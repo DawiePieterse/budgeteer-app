@@ -6,6 +6,8 @@ use App\Enums\TransactionSource;
 use App\Gmail\Parsers\ParsedEmail;
 use App\Models\Account;
 use App\Models\Card;
+use App\Models\Category;
+use App\Models\Merchant;
 use App\Models\Person;
 use App\Models\Settlement;
 use App\Models\Transaction;
@@ -39,7 +41,7 @@ it('charges a card to someone new and keeps it out of the budget', function () {
     $this->get('/?in='.today()->toDateString())
         ->assertSee('R123.00')          // our spending
         ->assertDontSee('R500.00')      // his purchase, before his start date, is neither spending nor owed
-        ->assertSee('Owed to us');
+        ->assertDontSee('Owed to us');  // so he owes nothing yet, and is not listed
     $this->get('/categorise')->assertDontSee('GAME');
 });
 
@@ -141,4 +143,70 @@ it('keeps people and repayments to their own household', function () {
     $this->post("/cards/{$otherCard->id}", ['owner' => (string) $sam->id])->assertSessionHasErrors('owner');
 
     expect(Settlement::withoutGlobalScopes()->count())->toBe(1);
+});
+
+it('charges a purchase to someone new from the transaction page, outside the budget', function () {
+    $user = member();
+    $account = Account::factory()->create(['household_id' => $user->household_id]);
+    $groceries = Category::withoutGlobalScopes()->where('household_id', $user->household_id)->where('name', 'Groceries')->sole();
+    $t = Transaction::factory()->for($account)->create(['posted_on' => '2026-07-10', 'amount_cents' => -45000, 'description' => 'CHECKERS', 'category_id' => $groceries->id]);
+    $this->actingAs($user);
+
+    $this->post("/transactions/{$t->id}", ['person_id' => 'new', 'new_person' => '', 'is_transfer' => 0])->assertSessionHasErrors('new_person');
+    $this->post("/transactions/{$t->id}", ['person_id' => 'new', 'new_person' => 'Aunt Mary', 'category_id' => $groceries->id, 'is_transfer' => 0])
+        ->assertSessionHas('status', 'Charged to Aunt Mary: out of the budget, and Aunt Mary now owes R450.00.');
+
+    $mary = Person::sole();
+    expect($mary->opening_balance_on)->toBeNull()
+        ->and($t->fresh()->person_id)->toBe($mary->id)
+        ->and($t->fresh()->category_id)->toBe($groceries->id);
+    $this->get('/?in=2026-07-15')->assertSee('Owed to us')->assertSee('Aunt Mary');
+    $this->get("/people/{$mary->id}")->assertSee('Bought for Aunt Mary')->assertSee('CHECKERS')->assertDontSee('on the card');
+});
+
+it('charges a single purchase to someone from Categorise without remembering the shop', function () {
+    $user = member();
+    $account = Account::factory()->create(['household_id' => $user->household_id]);
+    Transaction::factory()->for($account)->create(['amount_cents' => -80000, 'description' => 'TAKEALOT', 'merchant_key' => 'TAKEALOT']);
+    Transaction::factory()->for($account)->create(['amount_cents' => -10000, 'description' => 'WOOLWORTHS A', 'merchant_key' => 'WOOLWORTHS']);
+    Transaction::factory()->for($account)->create(['amount_cents' => -20000, 'description' => 'WOOLWORTHS B', 'merchant_key' => 'WOOLWORTHS']);
+    $this->actingAs($user);
+
+    $this->get('/categorise')
+        ->assertSee('For someone new…')
+        ->assertSee('One of these bought for someone else?')          // the Woolworths pair: one by one instead
+        ->assertSee('/transactions?category=none&amp;merchant=WOOLWORTHS', false);
+
+    $this->post('/categorise', ['merchant_key' => 'TAKEALOT', 'money_in' => 0, 'category' => 'person:new', 'new_person' => 'Pieter'])
+        ->assertSessionHas('status', '1 charged to Pieter, out of the budget. Pieter now owes R800.00.');
+    expect(Merchant::where('key', 'TAKEALOT')->exists())->toBeFalse();
+    $this->get('/transactions?category=none&merchant=WOOLWORTHS')->assertSee('WOOLWORTHS A')->assertDontSee('TAKEALOT');
+});
+
+it('settles up in full, and then the person drops off the home screen', function () {
+    $user = member();
+    $account = Account::factory()->create(['household_id' => $user->household_id]);
+    $mary = Person::create(['household_id' => $user->household_id, 'name' => 'Aunt Mary', 'phone' => '082 123 4567']);
+    Transaction::factory()->for($account)->create(['posted_on' => today(), 'amount_cents' => -45000, 'person_id' => $mary->id]);
+    $this->actingAs($user);
+
+    $this->get("/people/{$mary->id}")->assertSee('Paid it all back')
+        ->assertSee(rawurlencode('Hi Aunt, what you owe us for the things we bought for you comes to R450.00. Thanks!'), false);
+    $this->post("/people/{$mary->id}/settlements/in-full")->assertSessionHas('status', 'Aunt Mary is all square: R450.00 recorded as paid back.');
+
+    expect(app(PersonBalance::class)->owed($mary))->toBe(0);
+    $this->get('/')->assertDontSee('Owed to us'); // (the flash message still names her)
+    $this->get("/people/{$mary->id}")->assertSee('All square')->assertDontSee('Paid it all back');
+    $this->get('/settings')->assertSee('People who pay you back')->assertSee('All square');
+    $this->post("/people/{$mary->id}/settlements/in-full")->assertStatus(422);
+});
+
+it('needs a date only when something was owed before', function () {
+    $user = member();
+    $mary = Person::create(['household_id' => $user->household_id, 'name' => 'Aunt Mary']);
+    $this->actingAs($user);
+
+    $this->post("/people/{$mary->id}", ['name' => 'Aunt Mary', 'opening_balance' => '0.00', 'opening_balance_on' => ''])->assertSessionHasNoErrors();
+    $this->post("/people/{$mary->id}", ['name' => 'Aunt Mary', 'opening_balance' => '100', 'opening_balance_on' => ''])->assertSessionHasErrors('opening_balance_on');
+    expect($mary->fresh()->opening_balance_on)->toBeNull();
 });

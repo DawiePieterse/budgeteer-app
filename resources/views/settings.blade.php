@@ -152,6 +152,19 @@
         </section>
     @endif
 
+    @if ($people->isNotEmpty())
+        <section class="card">
+            <h2>People who pay you back</h2>
+            @foreach ($people as $person)
+                <a class="row" href="{{ route('people.show', $person) }}">
+                    <span>{{ $person->name }}</span>
+                    <span class="small">{{ $owed[$person->id] === 0 ? 'All square' : money($owed[$person->id]) }} ›</span>
+                </a>
+            @endforeach
+            <p class="muted small">Add someone by choosing <strong>Bought for someone new…</strong> on a purchase.</p>
+        </section>
+    @endif
+
     @if ($emails->isNotEmpty())
         <section class="card">
             <h2>Latest bank emails</h2>

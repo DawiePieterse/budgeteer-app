@@ -8,14 +8,17 @@ use App\Models\GmailConnection;
 use App\Models\IngestedEmail;
 use App\Models\Person;
 use App\Models\User;
+use App\Services\PersonBalance;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
 {
-    public function edit(Request $request): View
+    public function edit(Request $request, PersonBalance $balances): View
     {
+        $people = Person::query()->orderBy('name')->get();
+
         return view('settings', [
             'household' => $request->user()->household,
             'me' => $request->user(),
@@ -23,7 +26,8 @@ class SettingsController extends Controller
             'accounts' => Account::query()->orderBy('bank')->get(),
             'users' => User::query()->where('household_id', $request->user()->household_id)->get(),
             'connections' => GmailConnection::query()->with('user')->get(),
-            'people' => Person::query()->orderBy('name')->get(),
+            'people' => $people,
+            'owed' => $people->mapWithKeys(fn (Person $p) => [$p->id => $balances->owed($p)]),
             'cards' => Card::query()->with(['account', 'chargeToPerson'])->orderBy('account_id')->orderBy('number_ending')->get(),
             'emails' => IngestedEmail::query()->with('transaction')->latest('id')->limit(15)->get(),
         ]);

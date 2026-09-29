@@ -25,15 +25,19 @@
                 </optgroup>
             @endforeach
         </select>
-        @if ($people->isNotEmpty())
-            <label for="person_id">Whose spending</label>
-            <select name="person_id" id="person_id">
-                <option value="">Ours (in the budget)</option>
-                @foreach ($people as $person)
-                    <option value="{{ $person->id }}" @selected($transaction->person_id === $person->id)>Charged to {{ $person->name }}</option>
-                @endforeach
-            </select>
-        @endif
+        <label for="person_id">Whose spending</label>
+        <select name="person_id" id="person_id" data-reveal="new" data-reveal-target="new-person-field">
+            <option value="">Ours (in the budget)</option>
+            @foreach ($people as $person)
+                <option value="{{ $person->id }}" @selected((string) old('person_id', $transaction->person_id) === (string) $person->id)>Bought for {{ $person->name }} (they pay back)</option>
+            @endforeach
+            <option value="{{ \App\Http\Controllers\TransactionController::NEW_PERSON }}" @selected(old('person_id') === \App\Http\Controllers\TransactionController::NEW_PERSON)>Bought for someone new…</option>
+        </select>
+        <div id="new-person-field">
+            <label for="new_person">Their name</label>
+            <input type="text" name="new_person" id="new_person" value="{{ old('new_person') }}" maxlength="100" autocomplete="off">
+        </div>
+        <p class="muted small">Something bought for someone else stays out of the budget and is added to what they owe you.</p>
         @if ($projects->isNotEmpty())
             <label for="project_id">Special project</label>
             <select name="project_id" id="project_id">
@@ -51,3 +55,7 @@
         <button type="submit">Save</button>
     </form>
 @endsection
+
+@push('scripts')
+    <script src="{{ versioned_asset('js/reveal.js') }}" defer></script>
+@endpush

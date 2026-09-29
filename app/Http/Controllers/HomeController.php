@@ -65,7 +65,8 @@ class HomeController extends Controller
             'toCategorise' => Transaction::query()->whereNull('category_id')->where('is_transfer', false)->whereNull('person_id')->whereNull('project_id')->count(),
             'projects' => Project::query()->orderBy('name')->get(),
             'recurring' => $schedule->occurrences(RecurringPayment::query()->where('active', true)->get(), $period),
-            'owedToUs' => Person::query()->orderBy('name')->get()->map(fn (Person $p) => ['person' => $p, 'cents' => $balances->owed($p)]),
+            // Only people with something open: once someone is all square they drop off until the next purchase.
+            'owedToUs' => Person::query()->orderBy('name')->get()->map(fn (Person $p) => ['person' => $p, 'cents' => $balances->owed($p)])->filter(fn ($row) => $row['cents'] !== 0)->values(),
             'accounts' => Account::query()->orderBy('bank')->get(),
         ]);
     }

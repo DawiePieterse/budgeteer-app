@@ -7,11 +7,24 @@
 
     <section class="card">
         <div class="row">
-            <span><strong>Owes you</strong><span class="muted small block">since {{ $person->opening_balance_on?->format('j M Y') ?? 'the start' }}, less repayments</span></span>
-            <strong @class(['amount', 'out' => $owed > 0, 'in' => $owed < 0])>{{ money($owed) }}</strong>
+            @if ($owed === 0)
+                <span><strong>All square</strong><span class="muted small block">{{ $person->name }} owes you nothing.</span></span>
+            @else
+                <span><strong>{{ $owed > 0 ? 'Owes you' : 'You owe '.$person->name }}</strong><span class="muted small block">@if ($person->opening_balance_on) since {{ $person->opening_balance_on->format('j M Y') }}, @endif less repayments</span></span>
+            @endif
+            <strong @class(['amount', 'out' => $owed > 0, 'in' => $owed < 0])>{{ money(abs($owed)) }}</strong>
         </div>
-        @if ($whatsApp)
-            <a class="button secondary" href="{{ $whatsApp }}" rel="noopener" target="_blank">Ask on WhatsApp</a>
+        @if ($owed > 0)
+            <div class="inline actions">
+                @if ($whatsApp)
+                    <a class="button secondary" href="{{ $whatsApp }}" rel="noopener" target="_blank">Ask on WhatsApp</a>
+                @endif
+                <form method="POST" action="{{ route('people.settlements.in-full', $person) }}">
+                    @csrf
+                    <button type="submit" class="secondary">Paid it all back</button>
+                </form>
+            </div>
+            <p class="muted small">If the money came into the bank, it shows below once the statement or email is in; choose it there instead.</p>
         @endif
     </section>
 
@@ -30,7 +43,7 @@
 
     @if ($thisMonth->isNotEmpty())
         <section class="card">
-            <h2>This month on the card</h2>
+            <h2>This month{{ $hasCard ? ' on the card' : '' }}</h2>
             @foreach ($thisMonth as $name => $cents)
                 <div class="row"><span>{{ $name }}</span><span class="amount">{{ money($cents) }}</span></div>
             @endforeach
@@ -77,14 +90,14 @@
     </section>
 
     <section class="card">
-        <h2>Bought on the card</h2>
+        <h2>{{ $hasCard ? 'Bought on the card' : 'Bought for '.$person->name }}</h2>
         @forelse ($charges->take(100) as $t)
             <a class="row" href="{{ route('transactions.edit', $t) }}">
                 <span>{{ $t->description }} <span class="muted small block">{{ $t->posted_on->format('j M Y') }}@if ($t->card) · ••{{ $t->card->number_ending }}@endif · {{ $t->category->name ?? 'Not categorised' }}</span></span>
                 <span @class(['amount', 'in' => $t->amount_cents > 0])>{{ money(-$t->amount_cents) }}</span>
             </a>
         @empty
-            <p class="muted small">Nothing charged since {{ $person->opening_balance_on?->format('j M Y') ?? 'the start' }}.</p>
+            <p class="muted small">Nothing charged @if ($person->opening_balance_on) since {{ $person->opening_balance_on->format('j M Y') }} @else yet @endif.</p>
         @endforelse
     </section>
 
@@ -97,14 +110,14 @@
         <div class="pair">
             <span>
                 <label for="opening_balance_on">Owed on</label>
-                <input type="date" name="opening_balance_on" id="opening_balance_on" value="{{ old('opening_balance_on', $person->opening_balance_on?->toDateString() ?? now()->toDateString()) }}" required>
+                <input type="date" name="opening_balance_on" id="opening_balance_on" value="{{ old('opening_balance_on', $person->opening_balance_on?->toDateString()) }}">
             </span>
             <span>
                 <label for="opening_balance">Amount (R)</label>
                 <input type="number" name="opening_balance" id="opening_balance" step="0.01" value="{{ old('opening_balance', number_format($person->opening_balance_cents / 100, 2, '.', '')) }}" required>
             </span>
         </div>
-        <p class="muted small">What {{ $person->name }} owed at the end of that day. Card purchases after it are added; earlier ones are already in this amount.</p>
+        <p class="muted small">What {{ $person->name }} already owed at the end of that day, from before Budgeteer. Purchases after it are added; earlier ones are already in this amount. Leave the date empty and the amount 0 if nothing was owed.</p>
 
         <label for="payment_reference">Payments from {{ $person->name }} mention</label>
         <input type="text" name="payment_reference" id="payment_reference" value="{{ old('payment_reference', $person->payment_reference) }}" maxlength="100" placeholder="For example: {{ strtoupper(explode(' ', $person->name)[0]) }}">

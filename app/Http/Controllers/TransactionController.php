@@ -8,6 +8,7 @@ use App\Models\Person;
 use App\Models\Project;
 use App\Models\Transaction;
 use App\Services\BudgetPeriod;
+use App\Services\PersonBalance;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,9 @@ use Illuminate\View\View;
 
 class TransactionController extends Controller
 {
+    /** Choice value for charging a purchase to someone not in the list yet. */
+    public const NEW_PERSON = 'new';
+
     public function index(Request $request): View
     {
         $query = Transaction::query()->with(['account', 'category', 'person', 'project'])->orderByDesc('posted_on')->orderByDesc('id');
@@ -36,11 +40,14 @@ class TransactionController extends Controller
         } elseif ($request->filled('from') && $request->filled('to')) {
             $query->whereBetween('posted_on', [$request->date('from')->toDateString(), $request->date('to')->toDateString()]);
         }
+        if ($request->filled('merchant')) {
+            $query->where('merchant_key', $request->string('merchant'));
+        }
         if ($request->filled('q')) {
             $query->where('description', 'like', '%'.str_replace(['%', '_'], ['\%', '\_'], $request->string('q')).'%');
         }
 
-        $filtered = collect($request->only(['category', 'account', 'q', 'from', 'month']))->filter()->isNotEmpty();
+        $filtered = collect($request->only(['category', 'account', 'q', 'from', 'month', 'merchant']))->filter()->isNotEmpty();
 
         return view('transactions.index', [
             'total' => $filtered ? ['count' => (clone $query)->count(), 'cents' => (int) (clone $query)->sum('amount_cents')] : null,
@@ -90,18 +97,37 @@ class TransactionController extends Controller
         $data = $request->validate([
             'category_id' => ['nullable', Rule::in(Category::query()->pluck('id')->all())],
             'is_transfer' => ['boolean'],
-            'person_id' => ['nullable', Rule::in(Person::query()->pluck('id')->all())],
+            'person_id' => ['nullable', Rule::in([self::NEW_PERSON, ...Person::query()->pluck('id')->map(fn ($id) => (string) $id)->all()])],
+            'new_person' => ['required_if:person_id,'.self::NEW_PERSON, 'nullable', 'string', 'max:100'],
             'project_id' => ['nullable', Rule::in(Project::query()->pluck('id')->all())],
-        ]);
+        ], ['new_person.required_if' => 'Type the name of the person who will pay you back.']);
         $isTransfer = (bool) ($data['is_transfer'] ?? false);
+
+        $person = null;
+        if (! $isTransfer && ! $transaction->settlement()->exists()) {
+            $person = match ($data['person_id'] ?? null) {
+                null, '' => null,
+                // Someone who owed nothing before: every purchase charged to them counts.
+                self::NEW_PERSON => Person::create(['name' => trim((string) $data['new_person']), 'opening_balance_cents' => 0, 'opening_balance_on' => null]),
+                default => Person::query()->findOrFail((int) $data['person_id']),
+            };
+        }
+
         $transaction->update([
             'category_id' => $isTransfer ? null : ($data['category_id'] ?? null),
             'is_transfer' => $isTransfer,
-            'person_id' => $isTransfer || $transaction->settlement()->exists() ? $transaction->person_id : ($data['person_id'] ?? null),
-            'project_id' => $isTransfer ? null : ($data['project_id'] ?? null),
+            'person_id' => $isTransfer || $transaction->settlement()->exists() ? $transaction->person_id : $person?->id,
+            'project_id' => $isTransfer || $person !== null ? null : ($data['project_id'] ?? null),
             'updated_by' => $request->user()->id,
         ]);
 
-        return redirect()->route('transactions.index')->with('status', 'Saved.');
+        $status = 'Saved.';
+        if ($person !== null) {
+            $status = $person->opening_balance_on !== null && $transaction->posted_on->lessThanOrEqualTo($person->opening_balance_on)
+                ? "Charged to {$person->name}, but it is from before {$person->opening_balance_on->format('j M Y')}, so it is already in what they owed then."
+                : "Charged to {$person->name}: out of the budget, and {$person->name} now owes ".money(app(PersonBalance::class)->owed($person)).'.';
+        }
+
+        return redirect()->route('transactions.index')->with('status', $status);
     }
 }
