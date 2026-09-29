@@ -44,8 +44,9 @@ emails. Built with Laravel 12 for the Afrihost hosting that runs Bowls Buddy. Th
   listed in Settings.
 - **Phone notifications:** each person turns them on per phone in Settings (Android in the browser; iPhone
   after Add to Home Screen) and picks what to hear about: a recurring payment late or its amount changed, a
-  budget line at 80% or over (and the whole budget over), and bank emails stopped because Gmail needs linking
-  again. Each warning is sent once, between 07:00 and 20:30; several at once come as one notification, and
+  budget line at 80% or over (and the whole budget over), bank emails stopped because Gmail needs linking
+  again, how the budget month went (from 08:00 the day after it ends), and a new bank statement that should
+  be out but is not uploaded (reminded again a week later). Each warning is sent once, between 07:00 and 20:30; several at once come as one notification, and
   tapping it opens the matching screen.
 - **Settings:** household name, the day the budget month starts, the names on payments between your own
   accounts, and account names.

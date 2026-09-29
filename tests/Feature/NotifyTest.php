@@ -7,6 +7,7 @@ use App\Models\Household;
 use App\Models\PushSubscription;
 use App\Models\RecurringPayment;
 use App\Models\SentNotification;
+use App\Models\StatementImport;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Notify\PushSender;
@@ -232,4 +233,73 @@ it('does not let one person remove another person\'s phone', function () {
 
     $this->actingAs($user)->post("/push/subscriptions/{$theirs->id}/delete")->assertNotFound();
     expect($theirs->fresh())->not->toBeNull();
+});
+
+it('sends how the last budget month went, once, from 08:00 on the new month', function () {
+    $push = fakePush();
+    $user = member();
+    phone($user);
+    $account = Account::factory()->create(['household_id' => $user->household_id]);
+    $groceries = budgetLine($user, 'Groceries', 500000);
+    $fuel = budgetLine($user, 'Fuel and car', 200000);
+    $medical = budgetLine($user, 'Medical', 900000);
+    spend($account, $groceries, '2026-09-10', 530000);
+    spend($account, $fuel, '2026-09-12', 150000);
+    spend($account, $medical, '2026-09-01', 900000);
+    spend($account, $groceries, '2026-10-01', 99900);        // the new month: not in September's summary
+    Transaction::factory()->for($account)->create(['posted_on' => '2026-09-25', 'amount_cents' => 6000000, 'description' => 'SALARY', 'category_id' => null]);
+    Transaction::factory()->for($account)->create(['posted_on' => '2026-09-20', 'amount_cents' => -40000, 'description' => 'NEW SHOP', 'category_id' => null]);
+
+    Carbon::setTestNow('2026-10-01 07:30');
+    $this->artisan('budgeteer:notify');
+    expect(collect($push->sent)->pluck('title')->all())->not->toContain('September 2026: R200.00 under budget');
+
+    Carbon::setTestNow('2026-10-01 08:15');
+    $this->artisan('budgeteer:notify');
+    Carbon::setTestNow('2026-10-02 09:00');
+    $this->artisan('budgeteer:notify');
+
+    $summary = collect($push->sent)->firstWhere('title', 'September 2026: R200.00 under budget');
+    expect(collect($push->sent)->where('title', 'September 2026: R200.00 under budget'))->toHaveCount(1)
+        ->and($summary['body'])->toBe('R15,800.00 of R16,000.00 spent on budget lines. Over: Groceries R300.00. Money in R60,000.00; everything spent R16,200.00.')
+        ->and($summary['url'])->toBe('/?in=2026-09-01');
+});
+
+it('stays quiet about the month when it is too late or nothing happened', function () {
+    $push = fakePush();
+    $user = member();
+    phone($user);
+    Carbon::setTestNow('2026-10-01 09:00');
+    $this->artisan('budgeteer:notify');
+    expect($push->sent)->toBe([]);
+
+    $account = Account::factory()->create(['household_id' => $user->household_id]);
+    spend($account, budgetLine($user, 'Groceries', 500000), '2026-09-10', 100000);
+    Carbon::setTestNow('2026-10-04 09:00');   // the fourth day: too late for September
+    $this->artisan('budgeteer:notify');
+    expect($push->sent)->toBe([]);
+});
+
+it('reminds to upload a statement a few days after the next one should be out, and once more a week later', function () {
+    $push = fakePush();
+    $user = member();
+    phone($user);
+    $account = Account::factory()->create(['household_id' => $user->household_id, 'name' => 'Cheque account', 'number_ending' => '3445']);
+    $import = fn (string $from, string $to) => StatementImport::withoutGlobalScopes()->create(['household_id' => $user->household_id, 'account_id' => $account->id, 'user_id' => $user->id,
+        'period_from' => $from, 'period_to' => $to, 'opening_cents' => 0, 'closing_cents' => 0, 'lines' => 0, 'added' => 0, 'already_there' => 0, 'matched_emails' => 0, 'fingerprint' => hash('sha256', $to)]);
+    $import('2026-07-21', '2026-08-20');
+
+    foreach (['2026-09-22 09:00', '2026-09-23 09:00', '2026-09-24 09:00', '2026-09-30 09:00', '2026-10-01 09:00'] as $now) {
+        Carbon::setTestNow($now);
+        $this->artisan('budgeteer:notify');
+    }
+    $reminders = collect($push->sent)->where('title', 'Upload the Cheque account statement')->values();
+    expect($reminders)->toHaveCount(2)
+        ->and($reminders[0]['body'])->toContain('The statement to 20 Sep should be out')
+        ->and($reminders[0]['url'])->toBe('/statements');
+
+    $import('2026-08-21', '2026-09-20');           // uploaded: the next one is due late October
+    Carbon::setTestNow('2026-10-10 09:00');
+    $this->artisan('budgeteer:notify');
+    expect(collect($push->sent)->where('title', 'Upload the Cheque account statement'))->toHaveCount(2);
 });

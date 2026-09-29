@@ -20,13 +20,15 @@ use Illuminate\Support\Carbon;
  * @property bool $notify_recurring
  * @property bool $notify_budget
  * @property bool $notify_gmail
+ * @property bool $notify_summary
+ * @property bool $notify_statements
  */
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
 
-    protected $fillable = ['household_id', 'name', 'email', 'google_id', 'avatar_url', 'last_signed_in_at', 'notify_recurring', 'notify_budget', 'notify_gmail'];
+    protected $fillable = ['household_id', 'name', 'email', 'google_id', 'avatar_url', 'last_signed_in_at', 'notify_recurring', 'notify_budget', 'notify_gmail', 'notify_summary', 'notify_statements'];
 
     protected $hidden = ['remember_token'];
 
@@ -37,6 +39,8 @@ class User extends Authenticatable
             'notify_recurring' => 'boolean',
             'notify_budget' => 'boolean',
             'notify_gmail' => 'boolean',
+            'notify_summary' => 'boolean',
+            'notify_statements' => 'boolean',
         ];
     }
 

@@ -59,6 +59,8 @@ class PushController extends Controller
             'notify_recurring' => $request->boolean('notify_recurring'),
             'notify_budget' => $request->boolean('notify_budget'),
             'notify_gmail' => $request->boolean('notify_gmail'),
+            'notify_summary' => $request->boolean('notify_summary'),
+            'notify_statements' => $request->boolean('notify_statements'),
         ]);
 
         return back()->with('status', 'Notification choices saved.');

@@ -98,6 +98,7 @@ class Notifier
             'title' => match ($kind) {
                 Notice::RECURRING => count($notices).' recurring payments need a look',
                 Notice::BUDGET => count($notices).' budget warnings',
+                Notice::STATEMENTS => count($notices).' statements to upload',
                 default => 'Bank emails have stopped',
             },
             'body' => implode("\n", array_map(fn (Notice $n) => $n->title, $notices)),

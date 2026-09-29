@@ -3,15 +3,19 @@
 namespace App\Notify;
 
 use App\Enums\CategoryKind;
+use App\Models\Account;
 use App\Models\Category;
 use App\Models\GmailConnection;
 use App\Models\Household;
 use App\Models\RecurringPayment;
+use App\Models\StatementImport;
 use App\Models\Transaction;
 use App\Recurring\Occurrence;
 use App\Recurring\RecurringSchedule;
 use App\Services\BudgetPeriod;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
 /** Looks at a household's money as it is now and lists everything that could be worth a notification. */
 class NoticeFinder
@@ -25,18 +29,33 @@ class NoticeFinder
     /** A changed amount is only news while the payment is this recent. */
     private const CHANGED_DAYS = 10;
 
+    /** The month-end summary goes from this hour on the first day of the new budget month… */
+    private const SUMMARY_HOUR = 8;
+
+    /** …and is still sent this many days into it, if the server missed the first. */
+    private const SUMMARY_DAYS = 3;
+
+    /** A bank's statement is usually out this many days after it ends. */
+    private const STATEMENT_OUT_AFTER_DAYS = 3;
+
+    /** A statement still not uploaded gets a second reminder this much later. */
+    private const STATEMENT_AGAIN_AFTER_DAYS = 7;
+
     public function __construct(private RecurringSchedule $schedule) {}
 
     /** @return list<Notice> */
-    public function find(Household $household, ?CarbonImmutable $today = null): array
+    public function find(Household $household, ?CarbonImmutable $now = null): array
     {
-        $today ??= CarbonImmutable::today();
+        $now ??= CarbonImmutable::now();
+        $today = $now->startOfDay();
         $period = BudgetPeriod::containing($today, $household->period_start_day);
 
         return [
             ...$this->recurring($household, $period, $today),
             ...$this->budget($household, $period, $today),
             ...$this->gmail($household),
+            ...$this->summary($household, $period, $now),
+            ...$this->statements($household, $today),
         ];
     }
 
@@ -80,12 +99,7 @@ class NoticeFinder
         if ($lines->isEmpty()) {
             return [];
         }
-        // The same money as the home screen: no transfers, nothing charged to a person or a special project.
-        $spent = Transaction::withoutGlobalScopes()->where('household_id', $household->id)
-            ->where('is_transfer', false)->whereNull('person_id')->whereNull('project_id')
-            ->whereBetween('posted_on', [$period->from->toDateString(), $period->to->toDateString()])
-            ->whereIn('category_id', $lines->pluck('id'))
-            ->groupBy('category_id')->selectRaw('category_id, -sum(amount_cents) as cents')->pluck('cents', 'category_id');
+        $spent = $this->spentByLine($household, $lines, $period);
 
         $from = $period->from->toDateString();
         $daysLeft = (int) $today->diffInDays($period->to) + 1;
@@ -120,6 +134,116 @@ class NoticeFinder
         }
 
         return $notices;
+    }
+
+    /**
+     * On the first days of a new budget month (from 08:00), how the month before went.
+     *
+     * @return list<Notice>
+     */
+    private function summary(Household $household, BudgetPeriod $period, CarbonImmutable $now): array
+    {
+        if ($now->hour < self::SUMMARY_HOUR || $now->startOfDay()->greaterThan($period->from->addDays(self::SUMMARY_DAYS - 1))) {
+            return [];
+        }
+        $last = $period->previous();
+        // The same money as the home screen: no transfers, nothing charged to a person or a special project.
+        $rows = $this->householdMoney($household, $last)->groupBy('category_id')
+            ->selectRaw('category_id, sum(case when amount_cents < 0 then -amount_cents else 0 end) as out_cents, sum(case when amount_cents > 0 then amount_cents else 0 end) as in_cents')
+            ->get()->keyBy('category_id');
+        if ($rows->isEmpty()) {
+            return [];
+        }
+        $categories = Category::withoutGlobalScopes()->where('household_id', $household->id)->get()->keyBy('id');
+        $isIncome = fn ($id) => $id !== null && $categories->get($id)?->kind === CategoryKind::Income;
+        $moneyIn = (int) $rows->filter(fn ($r) => $isIncome($r->category_id) || $r->category_id === null)->sum('in_cents');
+        $spentAll = (int) $rows->reject(fn ($r) => $isIncome($r->category_id))->sum(fn ($r) => $r->out_cents - ($r->category_id === null ? 0 : $r->in_cents));
+
+        $lines = $categories->filter(fn (Category $c) => $c->kind === CategoryKind::Expense && $c->budget_cents > 0);
+        $lineSpent = fn (Category $c) => (int) (($rows[$c->id]->out_cents ?? 0) - ($rows[$c->id]->in_cents ?? 0));
+        $budgeted = (int) $lines->sum('budget_cents');
+        $onLines = (int) $lines->sum($lineSpent);
+        $over = $lines->map(fn (Category $c) => ['name' => $c->name, 'over' => $lineSpent($c) - $c->budget_cents])
+            ->filter(fn ($l) => $l['over'] > 0)->sortByDesc('over')->values();
+
+        $label = $last->label();
+        $body = [];
+        if ($budgeted > 0) {
+            $title = $onLines > $budgeted
+                ? "{$label}: ".money($onLines - $budgeted).' over budget'
+                : "{$label}: ".money($budgeted - $onLines).' under budget';
+            $body[] = money($onLines).' of '.money($budgeted).' spent on budget lines.';
+            if ($over->isNotEmpty()) {
+                $names = $over->take(3)->map(fn ($l) => $l['name'].' '.money($l['over']))->implode(', ');
+                $body[] = 'Over: '.$names.($over->count() > 3 ? ' and '.($over->count() - 3).' more' : '').'.';
+            } else {
+                $body[] = 'Every line stayed within its budget.';
+            }
+        } else {
+            $title = "{$label}: ".money($spentAll).' spent';
+        }
+        $body[] = 'Money in '.money($moneyIn).'; everything spent '.money($spentAll).'.';
+
+        return [new Notice(Notice::SUMMARY, 'summary:'.$last->from->toDateString(), $title, implode(' ', $body),
+            route('home', ['in' => $last->from->toDateString()], absolute: false))];
+    }
+
+    /**
+     * A new statement is out a few days after the last one imported ends, a month later; reminded
+     * once then, and once more a week later if it is still not in.
+     *
+     * @return list<Notice>
+     */
+    private function statements(Household $household, CarbonImmutable $today): array
+    {
+        $latest = StatementImport::withoutGlobalScopes()->where('household_id', $household->id)
+            ->groupBy('account_id')->selectRaw('account_id, max(period_to) as last_to')->pluck('last_to', 'account_id');
+        $accounts = Account::withoutGlobalScopes()->whereIn('id', $latest->keys())->get()->keyBy('id');
+
+        $notices = [];
+        foreach ($latest as $accountId => $lastTo) {
+            $account = $accounts->get($accountId);
+            if ($account === null) {
+                continue;
+            }
+            $expected = CarbonImmutable::parse($lastTo)->addMonthNoOverflow();
+            $due = $expected->addDays(self::STATEMENT_OUT_AFTER_DAYS);
+            if ($today->lessThan($due)) {
+                continue;
+            }
+            $again = $today->greaterThanOrEqualTo($due->addDays(self::STATEMENT_AGAIN_AFTER_DAYS));
+            $notices[] = new Notice(Notice::STATEMENTS,
+                'statement:'.$account->id.':'.$expected->toDateString().($again ? ':again' : ''),
+                "Upload the {$account->name} statement",
+                'The statement to '.$expected->format('j M').' should be out: '.$account->bank->label().' ••'.$account->number_ending.
+                    '. Uploading it fills in anything the bank emails missed.',
+                route('statements.index', absolute: false));
+        }
+
+        return $notices;
+    }
+
+    /**
+     * The household's own money in a period, as on the home screen: no transfers, nothing charged to a
+     * person or a special project.
+     *
+     * @return Builder<Transaction>
+     */
+    private function householdMoney(Household $household, BudgetPeriod $period): Builder
+    {
+        return Transaction::withoutGlobalScopes()->where('household_id', $household->id)
+            ->where('is_transfer', false)->whereNull('person_id')->whereNull('project_id')
+            ->whereBetween('posted_on', [$period->from->toDateString(), $period->to->toDateString()]);
+    }
+
+    /**
+     * @param  Collection<int, Category>  $lines
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    private function spentByLine(Household $household, Collection $lines, BudgetPeriod $period): \Illuminate\Support\Collection
+    {
+        return $this->householdMoney($household, $period)->whereIn('category_id', $lines->pluck('id'))
+            ->groupBy('category_id')->selectRaw('category_id, -sum(amount_cents) as cents')->pluck('cents', 'category_id');
     }
 
     /** @return list<Notice> */

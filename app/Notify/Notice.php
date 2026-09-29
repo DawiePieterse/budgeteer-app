@@ -11,6 +11,10 @@ final class Notice
 
     public const GMAIL = 'gmail';
 
+    public const SUMMARY = 'summary';
+
+    public const STATEMENTS = 'statements';
+
     /**
      * @param  string  $key  the same event always has the same key, so it is sent once
      * @param  list<string>  $alsoMarks  keys to record as sent with this one, for example the 80% warning when a line goes straight over

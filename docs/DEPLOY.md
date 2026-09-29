@@ -133,8 +133,9 @@ Then each person, on each phone: Budgeteer → Settings → **Turn on for this p
   new icon, then turn notifications on in Settings there.
 
 The cron job checks every 15 minutes between 07:00 and 20:30 (`budgeteer:notify`) and sends each warning once:
-a recurring payment late or its amount changed, a budget line at 80% or over, the whole budget over, and bank
-emails stopped because Gmail needs linking again. Several at once arrive as one notification. Running
+a recurring payment late or its amount changed, a budget line at 80% or over, the whole budget over, bank
+emails stopped because Gmail needs linking again, how the budget month went (from 08:00 on the first day of
+the next), and a statement to upload (3 days after the next one should end, again a week later). Several at once arrive as one notification. Running
 `budgeteer:push-keys --force` makes new keys, after which every phone must turn notifications on again.
 
 ## Updating to a new version

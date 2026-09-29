@@ -52,6 +52,8 @@
             <label class="check"><input type="checkbox" name="notify_recurring" value="1" @checked($me->notify_recurring)> a recurring payment is late or its amount changed</label>
             <label class="check"><input type="checkbox" name="notify_budget" value="1" @checked($me->notify_budget)> a budget line reaches {{ (int) (\App\Notify\NoticeFinder::WARN_AT * 100) }}% or goes over, or the whole budget goes over</label>
             <label class="check"><input type="checkbox" name="notify_gmail" value="1" @checked($me->notify_gmail)> the bank emails stop coming in</label>
+            <label class="check"><input type="checkbox" name="notify_summary" value="1" @checked($me->notify_summary)> a budget month ends: how it went</label>
+            <label class="check"><input type="checkbox" name="notify_statements" value="1" @checked($me->notify_statements)> a new bank statement should be out and is not uploaded yet</label>
             <button type="submit" class="secondary">Save choices</button>
         </form>
 
