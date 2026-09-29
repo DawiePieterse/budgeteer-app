@@ -37,10 +37,13 @@ emails. Built with Laravel 12 for the Afrihost hosting that runs Bowls Buddy. Th
   (5 days after its date), and a late one can be marked paid elsewhere or skipped. Payments are linked by
   words in their description as statements and emails come in, and payments that already recur are
   suggested. The home screen lists anything late or changed.
+- **Phone notifications:** each person turns them on per phone in Settings (Android in the browser; iPhone
+  after Add to Home Screen) and picks what to hear about: a recurring payment late or its amount changed, a
+  budget line at 80% or over (and the whole budget over), and bank emails stopped because Gmail needs linking
+  again. Each warning is sent once, between 07:00 and 20:30; several at once come as one notification, and
+  tapping it opens the matching screen.
 - **Settings:** household name, the day the budget month starts, the names on payments between your own
   accounts, and account names.
-
-Next: notifications on the phone for late or changed payments and budget lines going over.
 
 ## Running it locally
 

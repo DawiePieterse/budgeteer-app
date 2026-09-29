@@ -209,3 +209,5 @@ select.suggested { border-color: var(--accent); }
 .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem; }
 .filters input[type=search], .filters button { grid-column: 1 / -1; }
 .filters button { margin-top: 0; }
+
+[hidden] { display: none !important; }

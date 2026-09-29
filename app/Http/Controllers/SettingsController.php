@@ -18,6 +18,8 @@ class SettingsController extends Controller
     {
         return view('settings', [
             'household' => $request->user()->household,
+            'me' => $request->user(),
+            'devices' => $request->user()->pushSubscriptions()->latest('id')->get(),
             'accounts' => Account::query()->orderBy('bank')->get(),
             'users' => User::query()->where('household_id', $request->user()->household_id)->get(),
             'connections' => GmailConnection::query()->with('user')->get(),

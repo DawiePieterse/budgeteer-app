@@ -9,4 +9,11 @@ return [
     // Sign in as any user without Google, for development on this machine only.
     'dev_login' => (bool) env('BUDGETEER_DEV_LOGIN', false),
 
+    // Phone notifications (Web Push). Create the keys once with `php artisan budgeteer:push-keys`.
+    'push' => [
+        'public_key' => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+        'subject' => env('VAPID_SUBJECT', 'mailto:'.env('MAIL_FROM_ADDRESS', 'budget@example.com')),
+    ],
+
 ];

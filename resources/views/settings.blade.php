@@ -39,6 +39,41 @@
         <button type="submit">Save settings</button>
     </form>
 
+    <section class="card" id="push" data-key="{{ config('budgeteer.push.public_key') }}" data-store="{{ route('push.store') }}" data-destroy="{{ route('push.destroy') }}">
+        <h2>Phone notifications</h2>
+        <p class="small" data-push-status role="status">Checking this phone…</p>
+        <p class="small" data-push-ios hidden>On iPhone: open this page in Safari, tap <strong>Share</strong> then <strong>Add to Home Screen</strong>. Open Budgeteer from the new icon, come back to Settings and turn notifications on.</p>
+        <button type="button" data-push-on hidden>Turn on for this phone</button>
+        <button type="button" class="secondary" data-push-off hidden>Turn off for this phone</button>
+
+        <form method="POST" action="{{ route('push.preferences') }}">
+            @csrf
+            <p class="small">Tell me when</p>
+            <label class="check"><input type="checkbox" name="notify_recurring" value="1" @checked($me->notify_recurring)> a recurring payment is late or its amount changed</label>
+            <label class="check"><input type="checkbox" name="notify_budget" value="1" @checked($me->notify_budget)> a budget line reaches {{ (int) (\App\Notify\NoticeFinder::WARN_AT * 100) }}% or goes over, or the whole budget goes over</label>
+            <label class="check"><input type="checkbox" name="notify_gmail" value="1" @checked($me->notify_gmail)> the bank emails stop coming in</label>
+            <button type="submit" class="secondary">Save choices</button>
+        </form>
+
+        @if ($devices->isNotEmpty())
+            <p class="small">Your phones and browsers</p>
+            @foreach ($devices as $device)
+                <div class="row">
+                    <span>{{ $device->device ?? 'Phone' }} <span class="muted small block">Added {{ $device->created_at->format('j M Y') }}@if ($device->last_sent_at) · last notified {{ $device->last_sent_at->diffForHumans() }}@endif</span></span>
+                    <form method="POST" action="{{ route('push.remove', $device) }}">
+                        @csrf
+                        <button type="submit" class="link">Remove</button>
+                    </form>
+                </div>
+            @endforeach
+            <form method="POST" action="{{ route('push.test') }}">
+                @csrf
+                <button type="submit" class="secondary">Send a test notification</button>
+            </form>
+        @endif
+        <p class="muted small">Sent between 07:00 and 20:30, each warning once. Each person chooses for themselves.</p>
+    </section>
+
     <section class="card" id="gmail">
         <h2>Bank emails (Gmail)</h2>
         @forelse ($connections as $connection)
@@ -149,3 +184,7 @@
         <p class="muted small">Add someone with <code>php artisan budgeteer:setup --emails=…</code> on the server.</p>
     </section>
 @endsection
+
+@push('scripts')
+    <script src="{{ versioned_asset('js/push.js') }}" defer></script>
+@endpush

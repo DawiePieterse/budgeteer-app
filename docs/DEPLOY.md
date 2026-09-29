@@ -115,6 +115,28 @@ In **Budgeteer**: Settings → **Link Gmail**. Google warns that the app is not 
 then **Go to budget.bowlsbuddy.co.za**, then tick **View your email messages and settings** and **Continue**.
 The first 30 days of labelled emails are read straight away; after that the cron job checks every 5 minutes.
 
+## Phone notifications
+
+Once, in Terminal (it writes two keys into `.env`; nothing to copy anywhere):
+
+```sh
+cd ~/budgeteer
+PHP=/opt/cpanel/ea-php83/root/usr/bin/php
+$PHP artisan budgeteer:push-keys && $PHP artisan config:cache
+```
+
+Then each person, on each phone: Budgeteer → Settings → **Turn on for this phone** → allow, then
+**Send a test notification**.
+
+- **Android** (Chrome or Samsung Internet): works straight from the browser.
+- **iPhone** (iOS 16.4 or newer): open Budgeteer in Safari, **Share → Add to Home Screen**, open it from the
+  new icon, then turn notifications on in Settings there.
+
+The cron job checks every 15 minutes between 07:00 and 20:30 (`budgeteer:notify`) and sends each warning once:
+a recurring payment late or its amount changed, a budget line at 80% or over, the whole budget over, and bank
+emails stopped because Gmail needs linking again. Several at once arrive as one notification. Running
+`budgeteer:push-keys --force` makes new keys, after which every phone must turn notifications on again.
+
 ## Updating to a new version
 
 1. Upload the new `budgeteer-<commit>.zip` into `~/budgeteer` and **Extract**, overwriting files. `.env` is

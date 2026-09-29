@@ -9,6 +9,7 @@ use App\Http\Controllers\GmailController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\PushController;
 use App\Http\Controllers\RecurringController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StatementController;
@@ -76,4 +77,10 @@ Route::middleware(['auth', 'throttle:120,1'])->group(function () {
 
     Route::get('/settings', [SettingsController::class, 'edit'])->name('settings');
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
+
+    Route::post('/push/subscriptions', [PushController::class, 'store'])->middleware('throttle:20,1')->name('push.store');
+    Route::post('/push/subscriptions/delete', [PushController::class, 'destroy'])->name('push.destroy');
+    Route::post('/push/subscriptions/{subscription}/delete', [PushController::class, 'remove'])->name('push.remove');
+    Route::post('/push/preferences', [PushController::class, 'preferences'])->name('push.preferences');
+    Route::post('/push/test', [PushController::class, 'test'])->middleware('throttle:5,1')->name('push.test');
 });

@@ -39,7 +39,7 @@ scheduled jobs run by cPanel cron, so no background process has to stay alive.
 | `laravel/socialite` | 5 | Google sign-in, and linking Gmail with the `gmail.readonly` scope and offline access |
 | `filament/filament` | 4 | Settings at `/admin`: categories, budgets, rules, people, email sources, household members |
 | `livewire/livewire` | 3 | Interactive Filament pages (comes with Filament) |
-| `laravel-notification-channels/webpush` | 13 | Web push to the installed PWA (over budget, items to review, money owed) |
+| `minishlink/web-push` | 11 | Phone notifications (Web Push with VAPID keys, `aes128gcm`): late or changed recurring payments, budget warnings, Gmail stopped. Works without `gmp`/`bcmath`, only slower |
 | `anthropic-ai/sdk` (PHP) | 0.51 | Optional fallback: reads a bank email no parser recognises (section 5) |
 | `symfony/dom-crawler` | 7 or 8 | Reading values out of HTML bank emails |
 | pdf.js (Mozilla) | 4.10 | Reading statement PDFs in the browser, vendored in `public/vendor/pdfjs` (no build step). The Standard Bank PDF is encrypted, which PHP PDF libraries refuse; pdf.js opens it, and also gives each amount's column position |
@@ -420,7 +420,7 @@ One database, `bowlsbg5n9w0_budgeteer`, created by Laravel migrations. Every tab
 | `categories`, `budgets`, `budget_periods` | Category tree with icons, amount per category per period |
 | `rules`, `merchants`, `category_tokens` | Explicit rules, merchant memory, the word model |
 | `people`, `receivables`, `settlements` | People who owe money, what they owe, how it was paid; `accounts` can name a person to charge every transaction to |
-| `push_subscriptions` | Web push endpoints per device |
+| `push_subscriptions`, `sent_notifications` | Web push endpoints per phone or browser, and each notification sent (so each goes once); `users.notify_*` hold each person's choices |
 | `bg_sessions`, `bg_cache`, `bg_cache_locks`, `bg_jobs`, `bg_failed_jobs`, `bg_migrations` | Laravel's own tables |
 
 - Character set `utf8mb4` everywhere.
@@ -454,7 +454,7 @@ a single file at level `error`, debug off.
 |---|---|
 | Gmail sync and parse | 5 minutes |
 | Queue drain | 5 minutes (with the scheduler) |
-| Budget alerts and review reminders (web push) | Hourly |
+| Phone notifications (`budgeteer:notify`), 07:00 to 20:30 | 15 minutes |
 | Create recurring occurrences for a new period, flag ones not seen | Daily |
 | Refresh a Gmail link that failed, and notify both people | Daily |
 | SQL backup | Nightly |
