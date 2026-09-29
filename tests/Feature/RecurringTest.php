@@ -169,3 +169,7 @@ it('keeps recurring payments to their own household', function () {
     $this->post("/recurring/{$r->id}/delete")->assertNotFound();
     $this->post("/recurring/{$r->id}/mark", ['due_on' => '2026-09-01', 'status' => 'skipped'])->assertNotFound();
 });
+
+it('points to recurring payments from the home screen before any are set up', function () {
+    $this->actingAs(member())->get('/')->assertSee('Set up recurring payments');
+});

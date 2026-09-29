@@ -22,7 +22,9 @@
         <div><span class="muted small">Money in − spent</span><strong @class(['in' => $received >= $spent, 'out' => $received < $spent])>{{ money($received - $spent) }}</strong><span class="muted small">{{ money($received) }} in</span></div>
     </section>
 
-    @if ($recurring !== [])
+    @if ($recurring === [])
+        <a class="notice action" href="{{ route('recurring.index') }}">Set up recurring payments (debit orders, levies…) to be told when one is late or changes ›</a>
+    @else
         @php($attention = collect($recurring)->filter->needsAttention())
         @php($paid = collect($recurring)->whereIn('status', ['paid', 'paid_by_hand'])->count())
         <section class="card">
