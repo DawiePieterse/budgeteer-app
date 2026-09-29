@@ -114,7 +114,8 @@ class GmailClient
         }
 
         $html = $this->part($data['payload'] ?? [], 'text/html');
-        $lines = $html !== null ? HtmlText::lines($html) : HtmlText::plain((string) $this->part($data['payload'] ?? [], 'text/plain'));
+        $plain = HtmlText::plain((string) $this->part($data['payload'] ?? [], 'text/plain'));
+        $lines = $html !== null ? HtmlText::lines($html) : $plain;
 
         return new GmailMessage(
             $id,
@@ -122,6 +123,7 @@ class GmailClient
             $headers['subject'] ?? '',
             CarbonImmutable::createFromTimestampMs((int) ($data['internalDate'] ?? 0))->setTimezone(config('app.timezone')),
             $lines,
+            $plain,
         );
     }
 

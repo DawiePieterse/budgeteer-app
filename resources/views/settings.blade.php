@@ -122,6 +122,7 @@
                 <li>Tick <strong>Apply the label</strong>, choose <strong>New label…</strong>, name it <code>{{ \App\Models\GmailConnection::LABEL }}</code>.</li>
                 <li>Tick <strong>Also apply filter to matching conversations</strong> and click <strong>Create filter</strong>.</li>
             </ol>
+            <p>For the items in Takealot and Amazon.co.za orders, make a second filter the same way with the search <code>from:(info@takealot.com OR auto-confirm@amazon.co.za)</code> and the same label.</p>
         </details>
     </section>
 
@@ -181,6 +182,7 @@
                             @case('added') Added @break
                             @case('matched') On a statement @break
                             @case('ignored') Skipped @break
+                            @case('order') Order @break
                             @case('unrecognised') Not read @break
                             @default Failed
                         @endswitch

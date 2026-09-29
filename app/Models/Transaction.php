@@ -99,4 +99,14 @@ class Transaction extends Model
     {
         return $this->belongsTo(Card::class);
     }
+
+    /**
+     * The online order this payment was for, when the shop's email was read.
+     *
+     * @return HasOne<Order, $this>
+     */
+    public function order(): HasOne
+    {
+        return $this->hasOne(Order::class);
+    }
 }

@@ -12,6 +12,26 @@
         <div class="row"><span>Kind</span><span>{{ $transaction->kind->label() }}@if ($transaction->bank_type) <span class="muted small block">{{ $transaction->bank_type }}</span>@endif</span></div>
     </section>
 
+    @if ($order = $transaction->order)
+        <section class="card">
+            <h2>{{ $order->shopName() }} order {{ $order->order_number }}</h2>
+            @foreach ($order->items as $item)
+                <div class="row">
+                    <span>{{ $item->name }}@if ($item->quantity > 1) <span class="muted small block">× {{ $item->quantity }}</span>@endif</span>
+                    @if ($item->price_cents !== null)<span class="amount">{{ money($item->price_cents) }}</span>@endif
+                </div>
+            @endforeach
+            <div class="row"><strong>Order total</strong><strong class="amount">{{ money($order->total_cents) }}</strong></div>
+            <p class="muted small">
+                Ordered {{ $order->ordered_at->format('j M Y H:i') }}@if ($order->deliver_to) · delivered to {{ $order->deliver_to }}@endif
+                · <a href="{{ $order->url() }}" rel="noopener" target="_blank">Open on {{ $order->shopName() }}</a>
+            </p>
+            @if ($deliveredToSomeone)
+                <p class="notice small">This went to {{ $deliveredToSomeone->name }}. If it was bought for them, choose <strong>Bought for {{ $deliveredToSomeone->name }}</strong> below.</p>
+            @endif
+        </section>
+    @endif
+
     <form method="POST" action="{{ route('transactions.update', $transaction) }}" class="card">
         @csrf
         <label for="category_id">Category</label>

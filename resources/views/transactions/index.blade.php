@@ -49,6 +49,9 @@
             <a class="row" href="{{ route('transactions.edit', $t) }}">
                 <span>
                     {{ $t->description }}
+                    @if ($t->order)
+                        <span class="small block">{{ $t->order->summary() }}</span>
+                    @endif
                     <span class="muted small block">
                         {{ $t->posted_on->format('j M Y') }} · {{ $t->account->name }} ·
                         @if ($t->is_transfer) Own accounts @elseif ($t->project) Project: {{ $t->project->name }} @elseif ($t->person) {{ $t->person->name }} @else {{ $t->category->name ?? 'Not categorised' }} @endif

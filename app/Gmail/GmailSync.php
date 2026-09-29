@@ -10,6 +10,11 @@ use App\Gmail\Parsers\StandardBankEmailParser;
 use App\Models\GmailConnection;
 use App\Models\Household;
 use App\Models\IngestedEmail;
+use App\Orders\AmazonEmailParser;
+use App\Orders\OrderEmailParser;
+use App\Orders\OrderMatcher;
+use App\Orders\OrderRecorder;
+use App\Orders\TakealotEmailParser;
 use App\Recurring\RecurringMatcher;
 use App\Transactions\EmailTransactions;
 use App\Transactions\TransferPairer;
@@ -33,6 +38,9 @@ class GmailSync
     /** @var list<EmailParser> */
     private array $parsers;
 
+    /** @var list<OrderEmailParser> */
+    private array $orderParsers;
+
     public function __construct(
         private GmailClient $gmail,
         private EmailTransactions $transactions,
@@ -40,8 +48,13 @@ class GmailSync
         private RecurringMatcher $recurring,
         DiscoveryEmailParser $discovery,
         StandardBankEmailParser $standardBank,
+        private OrderRecorder $orders,
+        private OrderMatcher $orderMatcher,
+        TakealotEmailParser $takealot,
+        AmazonEmailParser $amazon,
     ) {
         $this->parsers = [$discovery, $standardBank];
+        $this->orderParsers = [$takealot, $amazon];
     }
 
     /** @return array{added: int, matched: int, other: int, finished: bool} */
@@ -85,6 +98,7 @@ class GmailSync
 
             $this->pairer->pair($connection->household_id);
             $this->recurring->link($connection->household_id);
+            $this->orderMatcher->link($connection->household_id);
             $update = ['label_id' => $labelId, 'status' => GmailConnection::ACTIVE, 'last_error' => null, 'last_synced_at' => now()];
             if ($counts['finished']) {
                 $update['history_id'] = $historyId;
@@ -138,6 +152,7 @@ class GmailSync
             }
             $this->pairer->pair($connection->household_id);
             $this->recurring->link($connection->household_id);
+            $this->orderMatcher->link($connection->household_id);
         } catch (GmailException $e) {
             $connection->update(['status' => $e->needsRelink ? GmailConnection::NEEDS_RELINK : GmailConnection::ERROR, 'last_error' => mb_substr($e->getMessage(), 0, 500)]);
             $counts['finished'] = false;
@@ -172,12 +187,48 @@ class GmailSync
             }
             $this->pairer->pair($connection->household_id);
             $this->recurring->link($connection->household_id);
+            $this->orderMatcher->link($connection->household_id);
         } catch (GmailException $e) {
             $connection->update(['status' => $e->needsRelink ? GmailConnection::NEEDS_RELINK : GmailConnection::ERROR, 'last_error' => mb_substr($e->getMessage(), 0, 500)]);
             $counts['finished'] = false;
         }
 
         return $counts;
+    }
+
+    /** @param array<string, mixed> $record */
+    private function ingestOrder(GmailConnection $connection, GmailMessage $message, OrderEmailParser $parser, array $record): string
+    {
+        try {
+            return DB::transaction(function () use ($parser, $message, $connection, $record) {
+                $parsed = $parser->parse($message);
+                $keepFrom = Household::query()->whereKey($connection->household_id)->value('keep_from');
+                if ($keepFrom !== null && $parsed->orderedAt->toDateString() < substr((string) $keepFrom, 0, 10)) {
+                    throw new EmailToIgnore('Before the date Budgeteer keeps data from.');
+                }
+                $email = IngestedEmail::create($record + ['status' => IngestedEmail::ORDER, 'note' => ($parsed->shop === 'amazon' ? 'Amazon' : 'Takealot').' order '.$parsed->orderNumber]);
+                $order = $this->orders->record($parsed, $connection->household_id, $email->id);
+                $this->orderMatcher->link($connection->household_id);
+                if ($order->fresh()?->transaction_id !== null) {
+                    $email->update(['transaction_id' => $order->fresh()->transaction_id]);
+                }
+
+                return IngestedEmail::ORDER;
+            });
+        } catch (EmailToIgnore $e) {
+            IngestedEmail::create($record + ['status' => IngestedEmail::IGNORED, 'note' => mb_substr($e->getMessage(), 0, 500)]);
+
+            return IngestedEmail::IGNORED;
+        } catch (EmailNotUnderstood $e) {
+            IngestedEmail::create($record + ['status' => IngestedEmail::UNRECOGNISED, 'note' => mb_substr($e->getMessage(), 0, 500)]);
+
+            return IngestedEmail::UNRECOGNISED;
+        } catch (Throwable $e) {
+            Log::error('Could not read an order email', ['message' => $message->id, 'error' => $e->getMessage()]);
+            IngestedEmail::create($record + ['status' => IngestedEmail::FAILED, 'note' => 'Could not be read; see the log.']);
+
+            return IngestedEmail::FAILED;
+        }
     }
 
     private function ingest(GmailConnection $connection, GmailMessage $message): string
@@ -190,6 +241,11 @@ class GmailSync
             'subject' => mb_substr($message->subject, 0, 300),
             'received_at' => $message->receivedAt,
         ];
+
+        $orderParser = collect($this->orderParsers)->first(fn (OrderEmailParser $p) => $p->recognises($message));
+        if ($orderParser !== null) {
+            return $this->ingestOrder($connection, $message, $orderParser, $record);
+        }
 
         $parser = collect($this->parsers)->first(fn (EmailParser $p) => $p->recognises($message));
         if ($parser === null) {

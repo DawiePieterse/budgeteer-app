@@ -22,7 +22,7 @@ class TransactionController extends Controller
 
     public function index(Request $request): View
     {
-        $query = Transaction::query()->with(['account', 'category', 'person', 'project'])->orderByDesc('posted_on')->orderByDesc('id');
+        $query = Transaction::query()->with(['account', 'category', 'person', 'project', 'order.items'])->orderByDesc('posted_on')->orderByDesc('id');
         if ($request->filled('account')) {
             $query->where('account_id', $request->integer('account'));
         }
@@ -44,7 +44,10 @@ class TransactionController extends Controller
             $query->where('merchant_key', $request->string('merchant'));
         }
         if ($request->filled('q')) {
-            $query->where('description', 'like', '%'.str_replace(['%', '_'], ['\%', '\_'], $request->string('q')).'%');
+            // The description, or an item in the online order the payment was for.
+            $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $request->string('q')).'%';
+            $query->where(fn ($q) => $q->where('description', 'like', $like)
+                ->orWhereHas('order.items', fn ($items) => $items->where('name', 'like', $like)));
         }
 
         $filtered = collect($request->only(['category', 'account', 'q', 'from', 'month', 'merchant']))->filter()->isNotEmpty();
@@ -84,10 +87,18 @@ class TransactionController extends Controller
 
     public function edit(Transaction $transaction): View
     {
+        $transaction->load('order.items');
+        $people = Person::query()->orderBy('name')->get();
+        // An order delivered to someone who pays us back, while the payment still counts as ours.
+        $deliverTo = mb_strtolower((string) $transaction->order?->deliver_to);
+        $deliveredToSomeone = $deliverTo === '' || $transaction->person_id !== null ? null
+            : $people->first(fn (Person $p) => str_starts_with($deliverTo, mb_strtolower(explode(' ', trim($p->name))[0]).' ') || $deliverTo === mb_strtolower(trim($p->name)));
+
         return view('transactions.edit', [
             'transaction' => $transaction,
+            'deliveredToSomeone' => $deliveredToSomeone,
             'categories' => Category::query()->orderBy('kind')->orderBy('sort')->get()->groupBy(fn (Category $c) => $c->kind->value),
-            'people' => Person::query()->orderBy('name')->get(),
+            'people' => $people,
             'projects' => Project::query()->orderBy('name')->get(),
         ]);
     }

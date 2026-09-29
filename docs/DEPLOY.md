@@ -111,6 +111,10 @@ In **Gmail** (the account the banks email), create the filter:
 2. Tick **Apply the label**, **New label…** `Budgeteer`, tick **Also apply filter to matching conversations**,
    **Create filter**.
 
+For online orders, make a second filter the same way: search `from:(info@takealot.com OR auto-confirm@amazon.co.za)`,
+the same `Budgeteer` label, and **Also apply filter to matching conversations**. Then read the older ones once:
+`php artisan budgeteer:gmail-sync --since=2026-07-01`.
+
 In **Budgeteer**: Settings → **Link Gmail**. Google warns that the app is not verified: click **Advanced**,
 then **Go to budget.bowlsbuddy.co.za**, then tick **View your email messages and settings** and **Continue**.
 The first 30 days of labelled emails are read straight away; after that the cron job checks every 5 minutes.

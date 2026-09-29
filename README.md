@@ -37,6 +37,10 @@ emails. Built with Laravel 12 for the Afrihost hosting that runs Bowls Buddy. Th
   (5 days after its date), and a late one can be marked paid elsewhere or skipped. Payments are linked by
   words in their description as statements and emails come in, and payments that already recur are
   suggested. The home screen lists anything late or changed.
+- **Online orders:** Takealot payment confirmations and Amazon.co.za "Ordered" emails (labelled
+  `Budgeteer` by a second Gmail filter) are kept with their items and linked to the card payment with the
+  same total. The transaction shows what was bought, who it was delivered to (name only), and a link to
+  the order; Transactions search finds items too.
 - **Bought for someone else:** on a purchase, **Whose spending → Bought for …** (or **someone new…** with a
   name) takes it out of the budget and adds it to what that person owes. Categorise offers the same for a
   single purchase; a shop with several is opened one by one. Each person's page shows what they owe, a

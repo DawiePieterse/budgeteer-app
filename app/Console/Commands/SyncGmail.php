@@ -23,7 +23,7 @@ class SyncGmail extends Command
         $connections = GmailConnection::withoutGlobalScopes()->where('status', '!=', GmailConnection::NEEDS_RELINK)->get();
         if ($this->option('list-unread')) {
             $rows = IngestedEmail::withoutGlobalScopes()->whereIn('gmail_connection_id', $connections->pluck('id'))
-                ->whereNotIn('status', [IngestedEmail::ADDED, IngestedEmail::MATCHED])->orderBy('received_at')
+                ->whereNotIn('status', [IngestedEmail::ADDED, IngestedEmail::MATCHED, IngestedEmail::ORDER])->orderBy('received_at')
                 ->get()->map(fn (IngestedEmail $e) => [$e->received_at?->format('Y-m-d H:i'), $e->status, mb_substr((string) $e->subject, 0, 50), $e->note]);
             $this->table(['Received', 'Status', 'Subject', 'Why'], $rows->all());
 

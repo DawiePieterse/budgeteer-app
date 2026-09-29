@@ -13,6 +13,8 @@ final class GmailMessage
         public readonly CarbonImmutable $receivedAt,
         /** The body as plain lines of text, from the HTML or plain-text part. */
         public readonly array $lines,
+        /** The plain-text part's lines as well, when the email has both; some shops write a tidier one. */
+        public readonly array $plainLines = [],
     ) {}
 
     /** The address part of From, lower case: "Discovery Bank <alerts@discovery.bank>" gives alerts@discovery.bank. */

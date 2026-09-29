@@ -1,0 +1,39 @@
+Your Orders
+
+https://www.amazon.co.za/gp/css/order-history?ref_=fed_yo_default
+
+    Thanks for your order!
+Ordered
+
+Shipped
+
+Out for delivery
+
+Delivered
+
+Arriving tomorrow
+
+Sam – Sometown, Western Cape
+
+Order #
+171-1234567-7654321
+
+View or edit order
+https://www.amazon.co.za/your-orders/order-details?orderID=171-1234567-7654321&ref_=p_btn_fed_veo
+
+* Body Cream for Dry Skin, 450ml
+  Quantity: 2
+  189.05 ZAR
+
+* Toothpaste 75 ml
+  Quantity: 3
+  54.99 ZAR
+
+* Rolled Oats, 1kg
+  Quantity: 1
+  35.14 ZAR
+
+Total
+539.1 ZAR
+
+©2026 Amazon.com, Inc. or its affiliates. All rights reserved.

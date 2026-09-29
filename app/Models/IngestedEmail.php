@@ -33,6 +33,9 @@ class IngestedEmail extends Model
 
     public const FAILED = 'failed';
 
+    /** A shop's order confirmation, kept as an order with its items. */
+    public const ORDER = 'order';
+
     protected $fillable = ['household_id', 'gmail_connection_id', 'gmail_message_id', 'sender', 'subject', 'received_at', 'status', 'note', 'transaction_id'];
 
     protected function casts(): array
