@@ -41,13 +41,13 @@ class HomeController extends Controller
             if ($category?->kind === CategoryKind::Income || $categoryId === 'in') {
                 $income[] = ['name' => $category->name ?? 'Not categorised yet', 'cents' => $sum];
             } else {
-                $spending[(string) $categoryId] = ['name' => $category->name ?? 'Not categorised yet', 'cents' => -$sum, 'budget' => $category?->budget_cents];
+                $spending[(string) $categoryId] = ['id' => $category?->id, 'name' => $category->name ?? 'Not categorised yet', 'cents' => -$sum, 'budget' => $category?->budget_cents];
             }
         }
         // Every budget line shows, also those with nothing spent yet.
         foreach ($categories as $category) {
             if ($category->kind === CategoryKind::Expense && $category->budget_cents !== null && ! isset($spending[(string) $category->id])) {
-                $spending[(string) $category->id] = ['name' => $category->name, 'cents' => 0, 'budget' => $category->budget_cents];
+                $spending[(string) $category->id] = ['id' => $category->id, 'name' => $category->name, 'cents' => 0, 'budget' => $category->budget_cents];
             }
         }
         $spending = array_values($spending);

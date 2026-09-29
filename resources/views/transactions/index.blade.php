@@ -4,6 +4,9 @@
 
 @section('content')
     <h1>Transactions</h1>
+    @if ($category)
+        <p class="small">{{ $category->name }}@if (request('from')) · {{ \Carbon\Carbon::parse(request('from'))->format('j M') }} – {{ \Carbon\Carbon::parse(request('to'))->format('j M Y') }}@endif · <a href="{{ route('transactions.index') }}">show all</a></p>
+    @endif
 
     <form method="GET" class="inline filters">
         <label class="visually-hidden" for="q">Search</label>
@@ -15,6 +18,9 @@
                 <option value="{{ $account->id }}" @selected(request('account') == $account->id)>{{ $account->name }}</option>
             @endforeach
         </select>
+        @foreach (['category', 'from', 'to'] as $keep)
+            @if (request($keep))<input type="hidden" name="{{ $keep }}" value="{{ request($keep) }}">@endif
+        @endforeach
         <button type="submit" class="secondary">Show</button>
     </form>
 

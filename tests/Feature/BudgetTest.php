@@ -33,7 +33,7 @@ it('shows each budget line with what is spent of it, and what is left', function
         ->assertSee('R11,425.00')
         ->assertSee('of R10,000.00')
         ->assertSee('of R8,772.00')       // a budget line with nothing spent yet
-        ->assertSee('Left to spend')
+        ->assertSee('R7,347.00 left')
         ->assertSee('R7,347.00');         // R18,772 budget less R11,425 spent
 });
 

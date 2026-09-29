@@ -11,16 +11,42 @@
         <a class="notice action" href="{{ route('categorise') }}">{{ $toCategorise }} transactions to categorise ›</a>
     @endif
 
-    <section class="totals">
-        @if ($budgeted > 0)
-            <div><span class="muted small">Spent of budget</span><strong @class(['out' => $spent > $budgeted])>{{ money($spent) }}</strong><span class="muted small">of {{ money($budgeted) }}</span></div>
-            <div><span class="muted small">{{ $spent > $budgeted ? 'Over budget' : 'Left to spend' }}</span><strong @class(['in' => $spent <= $budgeted, 'out' => $spent > $budgeted])>{{ money(abs($budgeted - $spent)) }}</strong></div>
-        @else
+    @if ($budgeted > 0)
+        <p class="summary-line">
+            <span>Money in <strong class="in">{{ money($received) }}</strong></span>
+            <span>In − spent <strong @class(['in' => $received >= $spent, 'out' => $received < $spent])>{{ money($received - $spent) }}</strong></span>
+        </p>
+    @else
+        <section class="totals">
             <div><span class="muted small">Money in</span><strong class="in">{{ money($received) }}</strong></div>
             <div><span class="muted small">Spent</span><strong>{{ money($spent) }}</strong></div>
-        @endif
-        <div><span class="muted small">Money in − spent</span><strong @class(['in' => $received >= $spent, 'out' => $received < $spent])>{{ money($received - $spent) }}</strong><span class="muted small">{{ money($received) }} in</span></div>
-    </section>
+            <div><span class="muted small">Money in − spent</span><strong @class(['in' => $received >= $spent, 'out' => $received < $spent])>{{ money($received - $spent) }}</strong></div>
+        </section>
+    @endif
+
+    @php($budgetLines = collect($spending)->filter(fn ($r) => ($r['budget'] ?? null) !== null))
+    @php($otherLines = collect($spending)->filter(fn ($r) => ($r['budget'] ?? null) === null))
+    @if ($budgeted > 0)
+        @php($lineLink = fn ($row) => route('transactions.index', ['category' => $row['id'], 'from' => $period->from->toDateString(), 'to' => $period->to->toDateString()]))
+        {{-- Lines over budget or at least 80% used show; the rest are one tap away. --}}
+        @php($watch = $budgetLines->filter(fn ($r) => $r['budget'] > 0 ? $r['cents'] / $r['budget'] >= 0.8 : $r['cents'] > 0))
+        @php($onTrack = $budgetLines->diffKeys($watch))
+        <section class="card">
+            <h2>Budget <a class="small" href="{{ route('budget') }}">Change ›</a></h2>
+            <x-budget-bar class="total" :spent="(int) $budgetLines->sum('cents')" :budget="$budgeted" label="All budget lines" />
+            @foreach ($watch as $row)
+                <x-budget-line :spent="$row['cents']" :budget="$row['budget']" :label="$row['name']" :href="$lineLink($row)" />
+            @endforeach
+            @if ($onTrack->isNotEmpty())
+                <details class="more-lines" @if ($watch->isEmpty()) open @endif>
+                    <summary>{{ $watch->isEmpty() ? 'All' : 'Show' }} {{ $onTrack->count() }} {{ $watch->isEmpty() ? '' : 'more ' }}on track</summary>
+                    @foreach ($onTrack as $row)
+                        <x-budget-line :spent="$row['cents']" :budget="$row['budget']" :label="$row['name']" :href="$lineLink($row)" />
+                    @endforeach
+                </details>
+            @endif
+        </section>
+    @endif
 
     @if ($recurring === [])
         <a class="notice action" href="{{ route('recurring.index') }}">Set up recurring payments (debit orders, levies…) to be told when one is late or changes ›</a>
@@ -37,18 +63,6 @@
                         <span class="muted small block">@if ($o->transaction) {{ money(abs($o->transaction->amount_cents)) }}, expected {{ money($o->payment->amount_cents) }} @else {{ money($o->payment->amount_cents) }} not seen @endif</span>
                     </span>
                 </a>
-            @endforeach
-        </section>
-    @endif
-
-    @php($budgetLines = collect($spending)->filter(fn ($r) => ($r['budget'] ?? null) !== null))
-    @php($otherLines = collect($spending)->filter(fn ($r) => ($r['budget'] ?? null) === null))
-    @if ($budgeted > 0)
-        <section class="card">
-            <h2>Budget <a class="small" href="{{ route('budget') }}">Change ›</a></h2>
-            <x-budget-bar class="total" :spent="(int) $budgetLines->sum('cents')" :budget="$budgeted" label="All budget lines" />
-            @foreach ($budgetLines as $row)
-                <x-budget-bar :spent="$row['cents']" :budget="$row['budget']" :label="$row['name']" />
             @endforeach
         </section>
     @endif

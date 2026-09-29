@@ -20,6 +20,12 @@ class TransactionController extends Controller
         if ($request->filled('account')) {
             $query->where('account_id', $request->integer('account'));
         }
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->integer('category'));
+        }
+        if ($request->filled('from') && $request->filled('to')) {
+            $query->whereBetween('posted_on', [$request->date('from')->toDateString(), $request->date('to')->toDateString()]);
+        }
         if ($request->filled('q')) {
             $query->where('description', 'like', '%'.str_replace(['%', '_'], ['\%', '\_'], $request->string('q')).'%');
         }
@@ -27,6 +33,7 @@ class TransactionController extends Controller
         return view('transactions.index', [
             'transactions' => $query->paginate(50)->withQueryString(),
             'accounts' => Account::query()->get(),
+            'category' => $request->filled('category') ? Category::query()->find($request->integer('category')) : null,
         ]);
     }
 
