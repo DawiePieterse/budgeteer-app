@@ -14,10 +14,15 @@ use App\Services\BudgetPeriod;
 use App\Services\PersonBalance;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\View\View;
 
 class HomeController extends Controller
 {
+    public const CIRCLES = 'circles';
+
+    public const LIST = 'list';
+
     public function __invoke(Request $request, PersonBalance $balances, RecurringSchedule $schedule): View
     {
         $household = $request->user()->household;
@@ -41,13 +46,13 @@ class HomeController extends Controller
             if ($category?->kind === CategoryKind::Income || $categoryId === 'in') {
                 $income[] = ['name' => $category->name ?? 'Not categorised yet', 'cents' => $sum];
             } else {
-                $spending[(string) $categoryId] = ['id' => $category?->id, 'name' => $category->name ?? 'Not categorised yet', 'cents' => -$sum, 'budget' => $category?->budget_cents];
+                $spending[(string) $categoryId] = ['id' => $category?->id, 'name' => $category->name ?? 'Not categorised yet', 'cents' => -$sum, 'budget' => $category?->budget_cents, 'icon' => $category?->iconName() ?? 'tag', 'sort' => $category?->sort ?? PHP_INT_MAX];
             }
         }
         // Every budget line shows, also those with nothing spent yet.
         foreach ($categories as $category) {
             if ($category->kind === CategoryKind::Expense && $category->budget_cents !== null && ! isset($spending[(string) $category->id])) {
-                $spending[(string) $category->id] = ['id' => $category->id, 'name' => $category->name, 'cents' => 0, 'budget' => $category->budget_cents];
+                $spending[(string) $category->id] = ['id' => $category->id, 'name' => $category->name, 'cents' => 0, 'budget' => $category->budget_cents, 'icon' => $category->iconName(), 'sort' => $category->sort];
             }
         }
         $spending = array_values($spending);
@@ -55,7 +60,15 @@ class HomeController extends Controller
         usort($spending, fn ($a, $b) => [($a['budget'] ?? null) === null, -self::share($a), -$a['cents']] <=> [($b['budget'] ?? null) === null, -self::share($b), -$b['cents']]);
         usort($income, fn ($a, $b) => $b['cents'] <=> $a['cents']);
 
+        // Circles or list: each phone keeps its own choice.
+        $view = in_array($request->query('view'), [self::CIRCLES, self::LIST], true) ? $request->query('view') : $request->cookie('budget_view');
+        $view = $view === self::LIST ? self::LIST : self::CIRCLES;
+        if ($request->query('view') === $view) {
+            Cookie::queue('budget_view', $view, 60 * 24 * 365);
+        }
+
         return view('home', [
+            'budgetView' => $view,
             'period' => $period,
             'spending' => $spending,
             'income' => $income,

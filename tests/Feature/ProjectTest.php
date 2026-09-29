@@ -70,10 +70,49 @@ it('shows each budget line as spent of budget, with what is over and the percent
     $food->update(['budget_cents' => 1000000]);
     Transaction::factory()->for($account)->create(['posted_on' => '2026-07-03', 'amount_cents' => -1142500, 'category_id' => $food->id]);
 
-    $this->actingAs($user)->get('/?in=2026-07-15')
+    $this->actingAs($user)->get('/?in=2026-07-15&view=list')
         ->assertSee('114%')
         ->assertSee('R1,425.00 over')
         ->assertSee('Groceries: R11,425.00 of R10,000.00 (114%), R1,425.00 over')   // read out by screen readers
         ->assertSee('of R10,000.00')
-        ->assertDontSee('<svg', false);                                             // no bars on the home screen
+        ->assertDontSee('class="circles"', false);
+});
+
+it('shows budget lines as circles filled with the share used, in budget order, and remembers the view', function () {
+    $user = member();
+    $account = Account::factory()->create(['household_id' => $user->household_id]);
+    $line = fn (string $name, int $budget) => tap(Category::withoutGlobalScopes()->where('household_id', $user->household_id)->where('name', $name)->sole())->update(['budget_cents' => $budget]);
+    $food = $line('Groceries', 500000);
+    $fuel = $line('Fuel and car', 200000);
+    $line('Medical', 900000);
+    Transaction::factory()->for($account)->create(['posted_on' => '2026-07-03', 'amount_cents' => -420000, 'category_id' => $food->id]);
+    Transaction::factory()->for($account)->create(['posted_on' => '2026-07-04', 'amount_cents' => -230000, 'category_id' => $fuel->id]);
+    Transaction::factory()->for($account)->create(['posted_on' => '2026-07-05', 'amount_cents' => -5000, 'description' => 'NEW SHOP']);
+    $this->actingAs($user);
+
+    $page = $this->get('/?in=2026-07-15')->assertOk()
+        ->assertSee('class="circles"', false)
+        ->assertSee('aria-label="All budget lines: R6,500.00 of R16,000.00 spent, R9,500.00 left"', false)
+        ->assertSee('Groceries: R4,200.00 of R5,000.00 spent, R800.00 left')
+        ->assertSee('Fuel and car: R2,300.00 of R2,000.00 spent, R300.00 over')
+        ->assertSeeInOrder(['R300', 'over'])                                   // under the circle, whole rand
+        ->assertSee('Medical: R0.00 of R9,000.00 spent, R9,000.00 left')     // nothing spent yet: still shown
+        ->assertSee('Other: R50.00 spent, not on a budget line')
+        ->assertSee('y="10.3"', false);                                         // 84% used: the fill's top edge high in the circle
+    expect(strpos($page->getContent(), 'Groceries: R4,200') < strpos($page->getContent(), 'Fuel and car: R2,300'))->toBeTrue(); // list order, not fullest first
+
+    $this->get('/?in=2026-07-15&view=list')->assertCookie('budget_view', 'list')->assertDontSee('class="circles"', false);
+    $this->withCookie('budget_view', 'list')->get('/?in=2026-07-15')->assertDontSee('class="circles"', false);
+});
+
+it('guesses an icon from the line name, and lets it be chosen', function () {
+    $user = member();
+    $food = Category::withoutGlobalScopes()->where('household_id', $user->household_id)->where('name', 'Groceries')->sole();
+    expect($food->iconName())->toBe('basket');
+
+    $this->actingAs($user)->post('/budget', ['name' => [$food->id => 'Groceries'], 'budget' => [$food->id => '5000'], 'icon' => [$food->id => 'cart']])->assertSessionHasNoErrors();
+    expect($food->fresh()->iconName())->toBe('cart');
+    $this->post('/budget', ['name' => [$food->id => 'Groceries'], 'icon' => [$food->id => 'rocket']])->assertSessionHasErrors('icon.'.$food->id);
+    $this->post('/budget', ['name' => [$food->id => 'Groceries'], 'icon' => [$food->id => '']]);
+    expect($food->fresh()->icon)->toBeNull();
 });

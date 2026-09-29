@@ -18,6 +18,18 @@
                             <label class="visually-hidden" for="name-{{ $category->id }}">Name</label>
                             <input type="text" name="name[{{ $category->id }}]" id="name-{{ $category->id }}" value="{{ $category->name }}" maxlength="100" required>
                             <span class="muted small">{{ $used[$category->id] ?? 0 }} transactions</span>
+                            @if ($kind === 'expense')
+                                <span class="icon-pick">
+                                    <x-category-icon :icon="$category->iconName()" />
+                                    <label class="visually-hidden" for="icon-{{ $category->id }}">Icon for {{ $category->name }}</label>
+                                    <select name="icon[{{ $category->id }}]" id="icon-{{ $category->id }}">
+                                        <option value="">Guess from the name</option>
+                                        @foreach (\App\Support\CategoryIcons::choices() as $icon => $iconLabel)
+                                            <option value="{{ $icon }}" @selected($category->icon === $icon)>{{ $iconLabel }}</option>
+                                        @endforeach
+                                    </select>
+                                </span>
+                            @endif
                         </span>
                         <span>
                             <label class="visually-hidden" for="budget-{{ $category->id }}">Budget for {{ $category->name }} (R)</label>

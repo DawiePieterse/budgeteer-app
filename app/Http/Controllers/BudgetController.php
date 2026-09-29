@@ -10,6 +10,7 @@ use App\Models\Transaction;
 use App\Services\BudgetList;
 use App\Services\BudgetPeriod;
 use App\Statements\Money;
+use App\Support\CategoryIcons;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,6 +42,8 @@ class BudgetController extends Controller
             'budget.*' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
             'name' => ['array'],
             'name.*' => ['required', 'string', 'max:100'],
+            'icon' => ['array'],
+            'icon.*' => ['nullable', Rule::in(array_keys(CategoryIcons::ICONS))],
             'new_name' => ['nullable', 'string', 'max:100'],
             'new_kind' => ['nullable', Rule::enum(CategoryKind::class)],
             'new_budget' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
@@ -51,6 +54,7 @@ class BudgetController extends Controller
             $category->update([
                 'name' => trim($data['name'][$category->id]),
                 'budget_cents' => $amount === null || $amount === '' ? null : (int) round(((float) $amount) * 100),
+                'icon' => array_key_exists($category->id, $data['icon'] ?? []) ? ($data['icon'][$category->id] ?: null) : $category->icon,
             ]);
         }
         if (filled($data['new_name'] ?? null)) {

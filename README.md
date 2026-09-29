@@ -37,6 +37,10 @@ emails. Built with Laravel 12 for the Afrihost hosting that runs Bowls Buddy. Th
   (5 days after its date), and a late one can be marked paid elsewhere or skipped. Payments are linked by
   words in their description as statements and emails come in, and payments that already recur are
   suggested. The home screen lists anything late or changed.
+- **Budget circles:** the home screen shows the budget as a ring (all budget lines: spent of budget)
+  and a circle per line, filled from the bottom with the share used, with what is left under it; over
+  budget turns red. **List** switches to the text lines; each phone remembers its choice. Each line has
+  an icon, guessed from its name and changeable on the Budget screen.
 - **Online orders:** Takealot payment confirmations and Amazon.co.za "Ordered" emails (labelled
   `Budgeteer` by a second Gmail filter) are kept with their items and linked to the card payment with the
   same total. The transaction shows what was bought, who it was delivered to (name only), and a link to

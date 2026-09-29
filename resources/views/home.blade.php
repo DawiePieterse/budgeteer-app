@@ -32,18 +32,37 @@
         @php($watch = $budgetLines->filter(fn ($r) => $r['budget'] > 0 ? $r['cents'] / $r['budget'] >= 0.8 : $r['cents'] > 0))
         @php($onTrack = $budgetLines->diffKeys($watch))
         <section class="card">
-            <h2>Budget <a class="small" href="{{ route('budget') }}">Change ›</a></h2>
-            <x-budget-line class="total" :spent="(int) $budgetLines->sum('cents')" :budget="$budgeted" label="All budget lines" />
-            @foreach ($watch as $row)
-                <x-budget-line :spent="$row['cents']" :budget="$row['budget']" :label="$row['name']" :href="$lineLink($row)" />
-            @endforeach
-            @if ($onTrack->isNotEmpty())
-                <details class="more-lines" @if ($watch->isEmpty()) open @endif>
-                    <summary>{{ $watch->isEmpty() ? 'All' : 'Show' }} {{ $onTrack->count() }} {{ $watch->isEmpty() ? '' : 'more ' }}on track</summary>
-                    @foreach ($onTrack as $row)
-                        <x-budget-line :spent="$row['cents']" :budget="$row['budget']" :label="$row['name']" :href="$lineLink($row)" />
+            <div class="card-head">
+                <h2>Budget <a class="small" href="{{ route('budget') }}">Change ›</a></h2>
+                <nav class="switch" aria-label="Show the budget as">
+                    <a href="{{ route('home', ['in' => $period->from->toDateString(), 'view' => 'circles']) }}" @if ($budgetView === 'circles') aria-current="true" @endif>Circles</a>
+                    <a href="{{ route('home', ['in' => $period->from->toDateString(), 'view' => 'list']) }}" @if ($budgetView === 'list') aria-current="true" @endif>List</a>
+                </nav>
+            </div>
+            @if ($budgetView === 'circles')
+                <x-budget-ring :spent="(int) $budgetLines->sum('cents')" :budget="$budgeted" />
+                {{-- In budget-list order, so each line keeps its place. --}}
+                <div class="circles">
+                    @foreach ($budgetLines->sortBy('sort') as $row)
+                        <x-budget-circle :id="'c'.$row['id']" :spent="$row['cents']" :budget="$row['budget']" :label="$row['name']" :icon="$row['icon']" :href="$lineLink($row)" />
                     @endforeach
-                </details>
+                    @if ($otherLines->sum('cents') > 0)
+                        <x-budget-circle id="other" :spent="(int) $otherLines->sum('cents')" label="Other" icon="tag" :href="route('transactions.index', ['month' => $period->from->toDateString()])" />
+                    @endif
+                </div>
+            @else
+                <x-budget-line class="total" :spent="(int) $budgetLines->sum('cents')" :budget="$budgeted" label="All budget lines" />
+                @foreach ($watch as $row)
+                    <x-budget-line :spent="$row['cents']" :budget="$row['budget']" :label="$row['name']" :href="$lineLink($row)" />
+                @endforeach
+                @if ($onTrack->isNotEmpty())
+                    <details class="more-lines" @if ($watch->isEmpty()) open @endif>
+                        <summary>{{ $watch->isEmpty() ? 'All' : 'Show' }} {{ $onTrack->count() }} {{ $watch->isEmpty() ? '' : 'more ' }}on track</summary>
+                        @foreach ($onTrack as $row)
+                            <x-budget-line :spent="$row['cents']" :budget="$row['budget']" :label="$row['name']" :href="$lineLink($row)" />
+                        @endforeach
+                    </details>
+                @endif
             @endif
         </section>
     @endif

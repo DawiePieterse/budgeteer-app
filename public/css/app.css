@@ -15,6 +15,13 @@
     --meter-track: #d5efeb;
     --total-bg: #eaf5f3;
     --meter-over: #d03b3b;
+    /* Budget circles: icon ink clears 4.5:1 on the track and on the fill; the ring clears 3:1 on the card. */
+    --circle-track: #d5efeb;
+    --circle-fill: #5ec4b4;
+    --circle-ring: #0d9488;
+    --circle-ink: #134e48;
+    --circle-over-fill: #f4c7c7;
+    --circle-over-ring: #d03b3b;
     color-scheme: light;
 }
 
@@ -35,6 +42,12 @@
         --meter-track: #20403c;
         --total-bg: #162a28;
         --meter-over: #d03b3b;
+        --circle-track: #20403c;
+        --circle-fill: #1f7a70;
+        --circle-ring: #1ea896;
+        --circle-ink: #e6eced;
+        --circle-over-fill: #7a2e2e;
+        --circle-over-ring: #e66767;
         color-scheme: dark;
     }
 }
@@ -211,3 +224,46 @@ select.suggested { border-color: var(--accent); }
 .filters button { margin-top: 0; }
 
 [hidden] { display: none !important; }
+
+/* Budget: circles or list */
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.card-head h2 a { margin-left: 0.35rem; font-weight: 400; }
+.switch { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; font-size: 0.85rem; }
+.switch a { padding: 0.2rem 0.75rem; color: var(--muted); text-decoration: none; }
+.switch a[aria-current] { background: var(--accent); color: var(--accent-text); }
+
+.ring { position: relative; width: 160px; height: 160px; margin: 0.5rem auto 1rem; }
+.ring svg { display: block; }
+.ring-track { stroke: var(--circle-track); }
+.ring-arc { stroke: var(--circle-ring); }
+.ring.is-over .ring-arc { stroke: var(--circle-over-ring); }
+.ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.25; }
+.ring-spent { font-size: 1.45rem; }
+.ring.is-over .ring-spent { color: var(--out); }
+.ring-left { font-size: 0.85rem; color: var(--muted); }
+.ring-left.over { color: var(--out); font-weight: 600; }
+
+.circles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem 0.35rem; }
+@media (min-width: 34rem) { .circles { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.circle { display: flex; flex-direction: column; align-items: center; text-align: center; color: var(--text); text-decoration: none; min-width: 0; }
+.circle-name { font-size: 0.78rem; font-weight: 600; line-height: 1.2; min-height: 2.4em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; hyphens: auto; }
+.circle-spent { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.2rem; }
+.circle-art { display: block; color: var(--circle-ink); }
+.circle-track { fill: var(--circle-track); }
+.circle-fill { fill: var(--circle-fill); }
+.circle-level { stroke: var(--circle-ring); stroke-width: 1.5; }
+.circle-ring { stroke: var(--circle-ring); stroke-width: 2; }
+.circle-left { display: flex; flex-direction: column; align-items: center; font-size: 0.8rem; font-weight: 700; color: var(--text); margin-top: 0.2rem; line-height: 1.2; white-space: nowrap; }
+.circle-note { font-size: 0.72rem; font-weight: 400; color: var(--muted); }
+.circle.is-over .circle-note { color: var(--out); font-weight: 600; }
+.circle.is-over .circle-fill { fill: var(--circle-over-fill); }
+.circle.is-over .circle-ring { stroke: var(--circle-over-ring); stroke-width: 3; }
+.circle.is-over .circle-left { color: var(--out); }
+.circle.is-empty .circle-name, .circle.is-empty .circle-left { color: var(--muted); }
+.circle.no-budget .circle-track { fill: var(--line); }
+.circle.no-budget .circle-ring { stroke: var(--muted); }
+.circle.no-budget .circle-art { color: var(--text); }
+.circle.no-budget .circle-left { color: var(--muted); font-weight: 400; }
+.circle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+.icon-pick { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.3rem; color: var(--circle-ink); }
+.icon-pick select { flex: 1; padding: 0.3rem; font-size: 0.85rem; }

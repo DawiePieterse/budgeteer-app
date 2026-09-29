@@ -19,3 +19,11 @@ if (! function_exists('versioned_asset')) {
         return asset($path).'?v='.(is_file($file) ? filemtime($file) : '0');
     }
 }
+
+if (! function_exists('rand_whole')) {
+    /** R4,200 from cents, rounded to the rand, where space is short. */
+    function rand_whole(int $cents): string
+    {
+        return ($cents < 0 ? '-' : '').'R'.number_format((int) round(abs($cents) / 100), 0, '.', ',');
+    }
+}
