@@ -1,8 +1,16 @@
 # Budgeteer
 
-A household budget that fills itself in from the bank: statements and (later) the banks' notification
-emails. Built with Laravel 12 for the Afrihost hosting that runs Bowls Buddy. The full plan is in
-[docs/TECHNOLOGY.md](docs/TECHNOLOGY.md).
+A household budget that fills itself in from the bank: monthly statements and the banks' notification
+emails. It runs as a phone-first web app (installable as a PWA) for a two-person household, built with
+Laravel 12 for the Afrihost shared hosting that runs Bowls Buddy.
+
+| | |
+|---|---|
+| Stack | PHP 8.3, Laravel 12, Blade and Alpine.js (no JS build step), MariaDB |
+| Banks read | Discovery Bank and Standard Bank (statements and emails) |
+| Other sources | Gmail API (read-only), Takealot and Amazon.co.za order emails |
+| Jobs | cPanel cron runs `php artisan schedule:run` every 5 minutes |
+| Docs | [docs/TECHNOLOGY.md](docs/TECHNOLOGY.md) (stack), [docs/DEPLOY.md](docs/DEPLOY.md) (deploying) |
 
 ## What works so far
 
@@ -62,6 +70,30 @@ emails. Built with Laravel 12 for the Afrihost hosting that runs Bowls Buddy. Th
 - **Settings:** household name, the day the budget month starts, the names on payments between your own
   accounts, and account names.
 
+## How it fits together
+
+| Where | What |
+|---|---|
+| `app/Statements` | PDF text readers per bank, with the check that every line adds up to the balance |
+| `app/Gmail` | Gmail OAuth, sync and one email parser per bank |
+| `app/Transactions` | Importing, classifying, merchant memory and pairing transfers between own accounts |
+| `app/Recurring` | Recurring payment schedules, matching and suggestions |
+| `app/Orders` | Takealot and Amazon.co.za order parsing and matching to card payments |
+| `app/Notify` | Finding warnings and sending web push notifications |
+| `app/Services`, `app/Support` | Budget periods and lists, balances owed, icons and colours |
+| `resources/views`, `public` | Phone screens, `manifest.webmanifest` and the service worker |
+| `tests` | Pest feature and unit tests with made-up statements and emails |
+
+## Commands and schedule
+
+| Command | Purpose | Runs |
+|---|---|---|
+| `budgeteer:setup` | Create the household and the sign-in allowlist | once |
+| `budgeteer:gmail-sync` | Read new labelled bank emails | every 5 minutes |
+| `budgeteer:notify` | Send phone notifications, each once | every 15 minutes, 07:00 to 20:30 |
+| `budgeteer:push-keys` | Generate the web push keys | once (`--force` replaces them) |
+| `budgeteer:keep-from` | Keep data only from a chosen day | on demand |
+
 ## Running it locally
 
 ```sh
@@ -85,3 +117,8 @@ composer audit
 ```
 
 Tests use made-up statements in `tests/Fixtures/statements`. Never commit a real statement.
+
+## Branches
+
+`main` is the default branch and holds the released code. Work on a branch and merge it into `main`; CI
+(GitHub Actions: Pint and Pest on PHP 8.3 with MySQL 8) runs on every push and pull request.
