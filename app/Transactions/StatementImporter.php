@@ -174,12 +174,20 @@ class StatementImporter
     /** A transaction read from an email for the same purchase, not yet confirmed by a statement. */
     private function emailTransaction(Account $account, StatementLine $line): ?Transaction
     {
+        return $this->emailTransactionBetween($account, $line, EmailTransactions::STATEMENT_LAG_DAYS, 1)
+            ?? $this->emailTransactionBetween($account, $line, EmailTransactions::WIDE_LAG_DAYS, EmailTransactions::WIDE_LAG_DAYS, $this->merchantKey->for($line->description));
+    }
+
+    /** Within the days around the line; with a merchant key, only an email with that same merchant. */
+    private function emailTransactionBetween(Account $account, StatementLine $line, int $before, int $after, ?string $merchantKey = null): ?Transaction
+    {
         return Transaction::withoutGlobalScopes()
             ->where('account_id', $account->id)
             ->where('source', TransactionSource::Email)
             ->whereNull('statement_import_id')
             ->where('amount_cents', $line->amountCents)
-            ->whereBetween('posted_on', [$line->date->subDays(EmailTransactions::STATEMENT_LAG_DAYS)->toDateString(), $line->date->addDay()->toDateString()])
+            ->when($merchantKey !== null, fn ($q) => $q->where('merchant_key', $merchantKey))
+            ->whereBetween('posted_on', [$line->date->subDays($before)->toDateString(), $line->date->addDays($after)->toDateString()])
             ->orderByRaw('abs(datediff(posted_on, ?))', [$line->date->toDateString()])
             ->first();
     }

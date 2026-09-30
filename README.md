@@ -93,6 +93,7 @@ Laravel 12 for the Afrihost shared hosting that runs Bowls Buddy.
 | `budgeteer:notify` | Send phone notifications, each once | every 15 minutes, 07:00 to 20:30 |
 | `budgeteer:push-keys` | Generate the web push keys | once (`--force` replaces them) |
 | `budgeteer:keep-from` | Keep data only from a chosen day | on demand |
+| `budgeteer:merge-duplicates` | Merge a purchase saved from an email and again from a statement | on demand |
 
 ## Running it locally
 

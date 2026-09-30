@@ -27,6 +27,9 @@ class EmailTransactions
     /** Days a statement line may be dated after the email for the same purchase. */
     public const STATEMENT_LAG_DAYS = 4;
 
+    /** Days either way when the amount matches and the merchant is the same, for a slow or late statement. */
+    public const WIDE_LAG_DAYS = 14;
+
     public function __construct(private MerchantKey $merchantKey) {}
 
     /** @return array{0: Transaction, 1: bool} the transaction, and whether it was already there */
@@ -127,11 +130,19 @@ class EmailTransactions
     /** A statement line for the same purchase that no email has claimed yet. */
     private function statementLine(ParsedEmail $email, Account $account): ?Transaction
     {
+        return $this->statementLineBetween($email, $account, 1, self::STATEMENT_LAG_DAYS)
+            ?? $this->statementLineBetween($email, $account, self::WIDE_LAG_DAYS, self::WIDE_LAG_DAYS, $this->merchantKey->for($email->description));
+    }
+
+    /** Within the days around the email; with a merchant key, only a line with that same merchant. */
+    private function statementLineBetween(ParsedEmail $email, Account $account, int $before, int $after, ?string $merchantKey = null): ?Transaction
+    {
         return Transaction::withoutGlobalScopes()
             ->where('account_id', $account->id)
             ->where('source', TransactionSource::Statement)
             ->where('amount_cents', $email->amountCents)
-            ->whereBetween('posted_on', [$email->occurredAt->subDay()->toDateString(), $email->occurredAt->addDays(self::STATEMENT_LAG_DAYS)->toDateString()])
+            ->when($merchantKey !== null, fn ($q) => $q->where('merchant_key', $merchantKey))
+            ->whereBetween('posted_on', [$email->occurredAt->subDays($before)->toDateString(), $email->occurredAt->addDays($after)->toDateString()])
             ->whereNotIn('id', IngestedEmail::withoutGlobalScopes()->whereNotNull('transaction_id')->select('transaction_id'))
             ->orderByRaw('abs(datediff(posted_on, ?))', [$email->occurredAt->toDateString()])
             ->first();

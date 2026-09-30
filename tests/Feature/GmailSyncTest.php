@@ -266,3 +266,32 @@ it('gives a foreign-currency statement line its card, or waits for the statement
         ->and(IngestedEmail::withoutGlobalScopes()->where('gmail_message_id', 'u')->sole()->note)->toContain('Paid in USD 23.00')
         ->and(Transaction::withoutGlobalScopes()->count())->toBe(8);
 });
+
+it('recognises a purchase on a statement dated a week after its email when the merchant is the same', function () {
+    $user = member();
+    $connection = linkedGmail($user);
+    fakeGmail(['w' => gmailMessage('w', 'card-payment-main-card', 'Transaction update — 24 Jun 2026 18:36:00', [
+        'WOOLWORTHS TYGERVALLEY ZA – R 981.40' => 'Woolworths Cape Town ZA – R 356.10', '***1234' => '***9999',
+    ])]);
+    app(GmailSync::class)->sync($connection);
+
+    $this->actingAs($user)->post('/statements/preview', ['text' => fixtureText('discovery')]);
+    $this->post('/statements')->assertSessionHas('status', fn ($s) => str_contains($s, '1 already read from bank emails'));
+
+    expect(Transaction::withoutGlobalScopes()->where('amount_cents', -35610)->count())->toBe(1)
+        ->and(Transaction::withoutGlobalScopes()->count())->toBe(8);
+});
+
+it('keeps a same-amount purchase a week apart at another merchant as its own transaction', function () {
+    $user = member();
+    $connection = linkedGmail($user);
+    fakeGmail(['w' => gmailMessage('w', 'card-payment-main-card', 'Transaction update — 24 Jun 2026 18:36:00', [
+        'WOOLWORTHS TYGERVALLEY ZA – R 981.40' => 'Builders Warehouse ZA – R 356.10', '***1234' => '***9999',
+    ])]);
+    app(GmailSync::class)->sync($connection);
+
+    $this->actingAs($user)->post('/statements/preview', ['text' => fixtureText('discovery')]);
+    $this->post('/statements');
+
+    expect(Transaction::withoutGlobalScopes()->where('amount_cents', -35610)->count())->toBe(2);
+});
