@@ -67,6 +67,7 @@ Route::middleware(['auth', 'throttle:120,1'])->group(function () {
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
     Route::post('/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
     Route::post('/projects/{project}/forget/{key}', [ProjectController::class, 'forgetMerchant'])->name('projects.forget');
+    Route::post('/projects/{project}/delete', [ProjectController::class, 'destroy'])->name('projects.destroy');
 
     Route::post('/cards/{card}', [CardController::class, 'update'])->name('cards.update');
 

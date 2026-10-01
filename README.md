@@ -52,7 +52,8 @@ Laravel 12 for the Afrihost shared hosting that runs Bowls Buddy.
   filled to what has been spent, with the percentage; over budget turns red with "over".
 - **Special projects** (for example a car rebuild): payments are kept out of the monthly budget and shown on
   the project's own page with their total, a month-by-month list and an optional project budget. A merchant
-  can be sent to a project once from Review, and its later payments follow.
+  can be sent to a project once from Review, and its later payments follow. A project can be removed from its
+  page once it has no payments left; its shops then stop going there.
 - **Recurring payments:** debit orders and other payments expected every week, month or year. Each budget
   month shows each one as paid, amount changed (with "expect the new amount from now on"), due, or late
   (5 days after its date), and a late one can be marked paid elsewhere or skipped. Payments are linked by
