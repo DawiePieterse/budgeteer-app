@@ -116,3 +116,37 @@ it('guesses an icon from the line name, and lets it be chosen', function () {
     $this->post('/budget', ['name' => [$food->id => 'Groceries'], 'icon' => [$food->id => '']]);
     expect($food->fresh()->icon)->toBeNull();
 });
+
+it('removes a special project only once it has no payments left', function () {
+    $user = member();
+    $account = Account::factory()->create(['household_id' => $user->household_id]);
+    $kombi = Project::create(['household_id' => $user->household_id, 'name' => 'Kombi']);
+    $payment = Transaction::factory()->for($account)->create(['project_id' => $kombi->id, 'merchant_key' => 'MIDAS']);
+    Merchant::create(['household_id' => $user->household_id, 'key' => 'MIDAS', 'project_id' => $kombi->id]);
+    $this->actingAs($user);
+
+    $this->get("/projects/{$kombi->id}")->assertSee('Kombi still has 1 payment')->assertDontSee('Remove Kombi');
+    $this->post("/projects/{$kombi->id}/delete")->assertSessionHas('error', fn ($e) => str_contains($e, 'still has 1 payment'));
+    expect(Project::find($kombi->id))->not->toBeNull();
+
+    // Moved back into the monthly budget on its own page, the project is empty and can go.
+    $this->post("/transactions/{$payment->id}", ['category_id' => '', 'person_id' => '', 'project_id' => '', 'is_transfer' => 0])->assertSessionHasNoErrors();
+    $this->get("/projects/{$kombi->id}")->assertSee('Remove Kombi')->assertSee('Payments at Midas will no longer go to a project');
+    $this->followingRedirects()->post("/projects/{$kombi->id}/delete")
+        ->assertSee('Project Kombi removed.')->assertDontSee('href="'.route('projects.show', $kombi).'"', false);
+
+    expect(Project::find($kombi->id))->toBeNull()
+        ->and(Merchant::where('key', 'MIDAS')->sole()->project_id)->toBeNull()   // its shops no longer go there
+        ->and($payment->fresh()->project_id)->toBeNull();
+    $this->get('/projects')->assertDontSee('Kombi');
+    $this->get('/')->assertDontSee('Kombi');
+});
+
+it('does not let one household remove another household\'s project', function () {
+    $mine = member();
+    $theirs = member();
+    $theirProject = Project::withoutGlobalScopes()->create(['household_id' => $theirs->household_id, 'name' => 'Their project']);
+
+    $this->actingAs($mine)->post("/projects/{$theirProject->id}/delete")->assertNotFound();
+    expect(Project::withoutGlobalScopes()->find($theirProject->id))->not->toBeNull();
+});

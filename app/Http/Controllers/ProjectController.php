@@ -61,6 +61,25 @@ class ProjectController extends Controller
         return back()->with('status', 'Saved.');
     }
 
+    /**
+     * Removes a project, but only once it has no payments left: they are moved out first on their own
+     * pages, so nothing goes back into the budget without someone choosing where. Shops that went to the
+     * project automatically stop doing so.
+     */
+    public function destroy(Project $project): RedirectResponse
+    {
+        $count = $project->transactions()->count();
+        if ($count > 0) {
+            return back()->with('error', "{$project->name} still has {$count} ".($count === 1 ? 'payment' : 'payments')
+                .'. Move '.($count === 1 ? 'it' : 'them').' to the monthly budget or another project first, on '.($count === 1 ? 'its' : 'each').' page.');
+        }
+
+        Merchant::query()->where('project_id', $project->id)->update(['project_id' => null]);
+        $project->delete();
+
+        return redirect()->route('projects.index')->with('status', "Project {$project->name} removed.");
+    }
+
     /** Stop sending a merchant's payments to the project; those already there stay. */
     public function forgetMerchant(Project $project, string $key): RedirectResponse
     {

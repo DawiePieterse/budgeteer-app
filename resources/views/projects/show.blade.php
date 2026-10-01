@@ -90,4 +90,24 @@
             <button type="submit">Save</button>
         </form>
     </details>
+
+    @php($count = $transactions->count())
+    <details class="card danger disclosure">
+        <summary class="item">
+            <span class="tile danger"><x-icon name="trash" /></span>
+            <span class="item-main"><span class="item-title out">Remove project</span><span class="item-sub">{{ $count === 0 ? 'It has no payments, so it can go' : 'Only once it has no payments left' }}</span></span>
+            <x-icon name="forward" class="chev" :size="20" />
+        </summary>
+        <div class="disclosure-body">
+            @if ($count === 0)
+                <p class="hint">Takes {{ $project->name }} off Home and Budget › Projects.@if ($merchants->isNotEmpty()) Payments at {{ $merchants->map(fn ($key) => readable($key))->join(', ', ' and ') }} will no longer go to a project by themselves.@endif</p>
+                <form method="POST" action="{{ route('projects.destroy', $project) }}">
+                    @csrf
+                    <button type="submit" class="outline danger wide">Remove {{ $project->name }}</button>
+                </form>
+            @else
+                <p class="hint">{{ $project->name }} still has {{ $count }} {{ $count === 1 ? 'payment' : 'payments' }}. To remove it, open each one under Payments above and set <strong>Special project</strong> to <strong>None (monthly budget)</strong> or another project.</p>
+            @endif
+        </div>
+    </details>
 @endsection
