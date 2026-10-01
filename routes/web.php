@@ -62,6 +62,7 @@ Route::middleware(['auth', 'throttle:120,1'])->group(function () {
     Route::post('/recurring/{recurring}/mark', [RecurringController::class, 'mark'])->name('recurring.mark');
     Route::post('/recurring/{recurring}/use-amount/{transaction}', [RecurringController::class, 'useAmount'])->name('recurring.use-amount');
 
+    Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
     Route::post('/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
@@ -69,6 +70,7 @@ Route::middleware(['auth', 'throttle:120,1'])->group(function () {
 
     Route::post('/cards/{card}', [CardController::class, 'update'])->name('cards.update');
 
+    Route::get('/people', [PersonController::class, 'index'])->name('people.index');
     Route::get('/people/{person}', [PersonController::class, 'show'])->name('people.show');
     Route::post('/people/{person}', [PersonController::class, 'update'])->name('people.update');
     Route::post('/people/{person}/settlements', [PersonController::class, 'storeSettlement'])->name('people.settlements.store');
@@ -76,8 +78,14 @@ Route::middleware(['auth', 'throttle:120,1'])->group(function () {
     Route::post('/people/{person}/settlements/from/{transaction}', [PersonController::class, 'settleFromTransaction'])->name('people.settlements.from');
     Route::post('/people/{person}/settlements/{settlement}/delete', [PersonController::class, 'destroySettlement'])->name('people.settlements.destroy');
 
-    Route::get('/settings', [SettingsController::class, 'edit'])->name('settings');
+    // Settings is the More tab: an index of the screens below and the household's settings pages.
+    Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+    Route::get('/settings/household', [SettingsController::class, 'household'])->name('settings.household');
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::get('/settings/accounts', [SettingsController::class, 'accounts'])->name('settings.accounts');
+    Route::post('/settings/accounts', [SettingsController::class, 'updateAccounts'])->name('settings.accounts.update');
+    Route::get('/settings/gmail', [SettingsController::class, 'gmail'])->name('settings.gmail');
+    Route::get('/settings/notifications', [SettingsController::class, 'notifications'])->name('settings.notifications');
 
     Route::post('/push/subscriptions', [PushController::class, 'store'])->middleware('throttle:20,1')->name('push.store');
     Route::post('/push/subscriptions/delete', [PushController::class, 'destroy'])->name('push.destroy');

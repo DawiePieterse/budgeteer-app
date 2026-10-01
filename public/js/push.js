@@ -1,4 +1,4 @@
-// Turns phone notifications on or off for this phone or browser (Settings screen).
+// Turns phone notifications on or off for this phone or browser (Settings › Phone notifications).
 (function () {
     const box = document.getElementById('push');
     if (!box) {
@@ -102,6 +102,37 @@
             show(false);
         } catch (e) {
             say('Could not turn notifications off: ' + e.message);
+        }
+    });
+})();
+
+// The notification choices save as soon as a switch is flipped; the Save button is only needed
+// without JavaScript, or if saving here fails.
+(function () {
+    const form = document.querySelector('form[data-autosave]');
+    if (!form) {
+        return;
+    }
+    const saved = document.querySelector('[data-saved]');
+    const fallback = form.querySelector('[data-autosave-hide]');
+    fallback.hidden = true;
+
+    form.addEventListener('change', async () => {
+        saved.textContent = 'Saving…';
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin',
+                body: new FormData(form),
+            });
+            if (!response.ok) {
+                throw new Error(String(response.status));
+            }
+            saved.textContent = 'Saved';
+        } catch (e) {
+            saved.textContent = 'Not saved';
+            fallback.hidden = false;
         }
     });
 })();

@@ -3,61 +3,91 @@
 @section('title', $project->name.' · Budgeteer')
 
 @section('content')
-    <h1>{{ $project->name }}</h1>
-    <p class="muted small">A special project: kept out of the monthly budget.</p>
+    <x-back :href="route('projects.index')" label="Projects" />
 
-    <section class="card">
-        <div class="row">
-            <span><strong>Spent so far</strong></span>
-            <strong class="amount">{{ money($spent) }}</strong>
+    <section class="card hero owner-{{ $project->ownerColour() }}" aria-labelledby="project-h">
+        <div class="group-head">
+            <span class="tile lg owned"><x-icon name="folder" :size="26" /></span>
+            <div class="item-main"><h1 id="project-h">{{ $project->name }}</h1><span class="item-sub">Special project, kept out of the monthly budget</span></div>
+        </div>
+        <div class="hero-text">
+            <span class="hero-label">Spent so far</span>
+            <span @class(['hero-value', 'over' => $project->budget_cents && $spent > $project->budget_cents])>{{ money($spent) }}</span>
         </div>
         @if ($project->budget_cents)
-            <x-budget-bar :spent="$spent" :budget="$project->budget_cents" label="Project budget" />
+            @php($over = $spent > $project->budget_cents)
+            <div class="meter" role="img" aria-label="Project budget: {{ money($spent) }} of {{ money($project->budget_cents) }}, {{ $over ? money($spent - $project->budget_cents).' over' : money($project->budget_cents - $spent).' left' }}">
+                <x-bar class="lg" :share="$spent / $project->budget_cents" :over="$over" />
+                <div class="meter-foot">
+                    <span>{{ (int) round($spent / $project->budget_cents * 100) }}% of {{ money($project->budget_cents) }}</span>
+                    <span @class(['over' => $over])>{{ $over ? money($spent - $project->budget_cents).' over' : money($project->budget_cents - $spent).' left' }}</span>
+                </div>
+            </div>
         @endif
     </section>
 
     @if ($byMonth->isNotEmpty())
-        <section class="card">
-            <h2>By month</h2>
-            @foreach ($byMonth as $month => $cents)
-                <div class="row"><span>{{ \Carbon\Carbon::parse($month.'-01')->format('F Y') }}</span><span class="amount">{{ money($cents) }}</span></div>
-            @endforeach
+        @php($most = max(1, $byMonth->max()))
+        <section class="section" aria-labelledby="months-h">
+            <div class="section-head"><h2 id="months-h">By month</h2></div>
+            <div class="card bar-list">
+                @foreach ($byMonth as $month => $cents)
+                    @php($thisMonth = $month === now()->format('Y-m'))
+                    <div @class(['bar-row', 'partial' => $thisMonth])>
+                        <span class="label">{{ \Carbon\Carbon::parse($month.'-01')->format('M Y') }}</span>
+                        <svg viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect class="month-fill" width="{{ $cents > 0 ? max(0.5, round($cents / $most * 100, 1)) : 0 }}" height="10"/></svg>
+                        <span class="value">{{ money($cents) }}</span>
+                    </div>
+                @endforeach
+                @if ($byMonth->has(now()->format('Y-m')))
+                    <p class="hint">The lighter bar is this month so far.</p>
+                @endif
+            </div>
         </section>
     @endif
 
-    <section class="card">
-        <h2>Payments</h2>
-        @forelse ($transactions as $t)
-            <a class="row" href="{{ route('transactions.edit', $t) }}">
-                <span>{{ $t->description }} <span class="muted small block">{{ $t->posted_on->format('j M Y') }} · {{ $t->account->name }}</span></span>
-                <span @class(['amount', 'in' => $t->amount_cents > 0])>{{ money(-$t->amount_cents) }}</span>
-            </a>
-        @empty
-            <p class="muted small">Nothing yet. On the Categorise screen, choose {{ $project->name }} for a merchant, or set it on a transaction's page.</p>
-        @endforelse
+    <section class="section" aria-labelledby="payments-h">
+        <div class="section-head"><h2 id="payments-h">Payments</h2><span class="muted">{{ $transactions->count() }}</span></div>
+        <div class="card">
+            @forelse ($transactions as $t)
+                @include('transactions._row', ['t' => $t, 'showDate' => true])
+            @empty
+                <p class="empty">Nothing yet. On the Review screen, choose {{ $project->name }} for a shop, or set it on a transaction's page.</p>
+            @endforelse
+        </div>
     </section>
 
     @if ($merchants->isNotEmpty())
-        <section class="card">
-            <h2>Goes here automatically</h2>
-            @foreach ($merchants as $key)
-                <form method="POST" action="{{ route('projects.forget', [$project, $key]) }}" class="row">
-                    @csrf
-                    <span>{{ $key }}</span>
-                    <button type="submit" class="link">Stop</button>
-                </form>
-            @endforeach
+        <section class="section" aria-labelledby="auto-h">
+            <div class="section-head"><h2 id="auto-h">Goes here automatically</h2></div>
+            <p class="section-note">Later payments at these shops are added to the project.</p>
+            <div class="chips">
+                @foreach ($merchants as $key)
+                    <span class="chip">
+                        {{ readable($key) }}
+                        <form method="POST" action="{{ route('projects.forget', [$project, $key]) }}">
+                            @csrf
+                            <button type="submit" aria-label="Stop sending {{ readable($key) }} here"><x-icon name="close" :size="16" /></button>
+                        </form>
+                    </span>
+                @endforeach
+            </div>
         </section>
     @endif
 
-    <form method="POST" action="{{ route('projects.update', $project) }}" class="card">
-        @csrf
-        <h2>Details</h2>
-        <div class="pair">
-            <span><label for="name">Name</label><input type="text" name="name" id="name" value="{{ $project->name }}" maxlength="100" required></span>
-            <span><label for="budget">Total budget (R)</label><input type="number" name="budget" id="budget" step="0.01" min="0" value="{{ $project->budget_cents !== null ? number_format($project->budget_cents / 100, 2, '.', '') : '' }}" placeholder="Optional"></span>
-        </div>
-        <x-colour-pick :current="$project->ownerColour()" />
-        <button type="submit">Save</button>
-    </form>
+    <details class="card disclosure">
+        <summary class="item">
+            <span class="item-main"><span class="item-title">Name, budget and colour</span><span class="item-sub">{{ $project->name }}@if ($project->budget_cents) · {{ money($project->budget_cents) }}@endif</span></span>
+            <x-icon name="down" class="chev down" :size="20" />
+        </summary>
+        <form method="POST" action="{{ route('projects.update', $project) }}" class="disclosure-body">
+            @csrf
+            <div class="pair wide-first">
+                <div class="field"><label for="name">Name</label><input type="text" name="name" id="name" value="{{ $project->name }}" maxlength="100" required></div>
+                <div class="field"><label for="budget">Total budget (R)</label><input type="number" class="money" name="budget" id="budget" step="0.01" min="0" inputmode="decimal" value="{{ $project->budget_cents !== null ? number_format($project->budget_cents / 100, 2, '.', '') : '' }}" placeholder="Optional"></div>
+            </div>
+            <x-colour-pick :current="$project->ownerColour()" />
+            <button type="submit">Save</button>
+        </form>
+    </details>
 @endsection

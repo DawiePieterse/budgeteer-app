@@ -196,21 +196,8 @@ class NoticeFinder
      */
     private function statements(Household $household, CarbonImmutable $today): array
     {
-        $latest = StatementImport::withoutGlobalScopes()->where('household_id', $household->id)
-            ->groupBy('account_id')->selectRaw('account_id, max(period_to) as last_to')->pluck('last_to', 'account_id');
-        $accounts = Account::withoutGlobalScopes()->whereIn('id', $latest->keys())->get()->keyBy('id');
-
         $notices = [];
-        foreach ($latest as $accountId => $lastTo) {
-            $account = $accounts->get($accountId);
-            if ($account === null) {
-                continue;
-            }
-            $expected = CarbonImmutable::parse($lastTo)->addMonthNoOverflow();
-            $due = $expected->addDays(self::STATEMENT_OUT_AFTER_DAYS);
-            if ($today->lessThan($due)) {
-                continue;
-            }
+        foreach ($this->statementsDue($household, $today) as ['account' => $account, 'expected' => $expected, 'due' => $due]) {
             $again = $today->greaterThanOrEqualTo($due->addDays(self::STATEMENT_AGAIN_AFTER_DAYS));
             $notices[] = new Notice(Notice::STATEMENTS,
                 'statement:'.$account->id.':'.$expected->toDateString().($again ? ':again' : ''),
@@ -221,6 +208,34 @@ class NoticeFinder
         }
 
         return $notices;
+    }
+
+    /**
+     * Accounts whose next statement should be out by now but is not imported yet: a month after the last
+     * one imported ends, plus a few days. Also shown on the home and statements screens.
+     *
+     * @return list<array{account: Account, expected: CarbonImmutable, due: CarbonImmutable}>
+     */
+    public function statementsDue(Household $household, CarbonImmutable $today): array
+    {
+        $latest = StatementImport::withoutGlobalScopes()->where('household_id', $household->id)
+            ->groupBy('account_id')->selectRaw('account_id, max(period_to) as last_to')->pluck('last_to', 'account_id');
+        $accounts = Account::withoutGlobalScopes()->whereIn('id', $latest->keys())->get()->keyBy('id');
+
+        $due = [];
+        foreach ($latest as $accountId => $lastTo) {
+            $account = $accounts->get($accountId);
+            if ($account === null) {
+                continue;
+            }
+            $expected = CarbonImmutable::parse($lastTo)->addMonthNoOverflow();
+            $outOn = $expected->addDays(self::STATEMENT_OUT_AFTER_DAYS);
+            if ($today->greaterThanOrEqualTo($outOn)) {
+                $due[] = ['account' => $account, 'expected' => $expected, 'due' => $outOn];
+            }
+        }
+
+        return $due;
     }
 
     /**
@@ -253,8 +268,8 @@ class NoticeFinder
         foreach (GmailConnection::withoutGlobalScopes()->where('household_id', $household->id)->where('status', GmailConnection::NEEDS_RELINK)->get() as $connection) {
             $notices[] = new Notice(Notice::GMAIL, "gmail:{$connection->id}:relink",
                 'Bank emails have stopped',
-                "Google no longer lets Budgeteer read {$connection->email}, so new card payments are not coming in. Link Gmail again in Settings.",
-                route('settings', absolute: false).'#gmail');
+                "Google no longer lets Budgeteer read {$connection->email}, so new card payments are not coming in. Tap to link Gmail again.",
+                route('settings.gmail', absolute: false));
         }
 
         return $notices;

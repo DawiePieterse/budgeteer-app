@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\CategoryKind;
 use App\Models\Category;
 use App\Models\Merchant;
-use App\Models\Project;
 use App\Models\Transaction;
 use App\Services\BudgetList;
 use App\Services\BudgetPeriod;
@@ -31,7 +30,6 @@ class BudgetController extends Controller
             'used' => $used,
             'total' => (int) $categories->where('kind', CategoryKind::Expense)->sum('budget_cents'),
             'period' => $period,
-            'projects' => Project::query()->orderBy('name')->get(),
         ]);
     }
 

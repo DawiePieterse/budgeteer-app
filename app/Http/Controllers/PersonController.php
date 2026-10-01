@@ -16,6 +16,17 @@ use Illuminate\View\View;
 
 class PersonController extends Controller
 {
+    /** Everyone who pays back, also those all square, who drop off the home screen. */
+    public function index(PersonBalance $balances): View
+    {
+        $people = Person::query()->orderBy('name')->get();
+
+        return view('people.index', [
+            'people' => $people,
+            'owed' => $people->mapWithKeys(fn (Person $p) => [$p->id => $balances->owed($p)]),
+        ]);
+    }
+
     public function show(Person $person, PersonBalance $balances): View
     {
         $charges = $balances->charges($person)->with(['card', 'category'])->orderByDesc('posted_on')->orderByDesc('id')->get();

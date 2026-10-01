@@ -26,8 +26,8 @@ it('lists, searches and edits transactions', function () {
     $t = Transaction::factory()->for($account)->create(['description' => 'CHECKERS SIXTY60']);
     $category = Category::withoutGlobalScopes()->where('household_id', $user->household_id)->where('name', 'Groceries')->sole();
 
-    $this->actingAs($user)->get('/transactions?q=sixty')->assertOk()->assertSee('CHECKERS SIXTY60');
-    $this->get('/transactions?q=nothing')->assertDontSee('CHECKERS SIXTY60');
+    $this->actingAs($user)->get('/transactions?q=sixty')->assertOk()->assertSee('Checkers Sixty60');
+    $this->get('/transactions?q=nothing')->assertDontSee('Checkers Sixty60');
     $this->get("/transactions/{$t->id}")->assertOk();
     $this->post("/transactions/{$t->id}", ['category_id' => $category->id, 'is_transfer' => 0])->assertRedirect('/transactions');
 
@@ -40,10 +40,12 @@ it('saves settings', function () {
     $account = Account::factory()->create(['household_id' => $user->household_id]);
 
     $this->actingAs($user)->get('/settings')->assertOk();
+    $this->get('/settings/household')->assertOk();
     $this->post('/settings', [
         'name' => 'Smith', 'period_start_day' => 25, 'own_account_names' => "J SMITH\nJ SMITH SAVINGS",
-        'accounts' => [$account->id => 'Our cheque account'],
     ])->assertRedirect();
+    $this->get('/settings/accounts')->assertOk();
+    $this->post('/settings/accounts', ['accounts' => [$account->id => 'Our cheque account']])->assertRedirect();
 
     expect($user->household->fresh()->period_start_day)->toBe(25)
         ->and($user->household->fresh()->ownAccountNames())->toBe(['J SMITH', 'J SMITH SAVINGS'])
@@ -58,11 +60,11 @@ it('keeps each household to its own data', function () {
     $theirCategory = Category::withoutGlobalScopes()->where('household_id', $theirs->household_id)->first();
 
     $this->actingAs($mine);
-    $this->get('/transactions')->assertDontSee('THEIR SECRET SHOP');
+    $this->get('/transactions')->assertDontSee('Their Secret Shop');
     $this->get("/transactions/{$theirTransaction->id}")->assertNotFound();
     $this->post("/transactions/{$theirTransaction->id}", ['category_id' => null])->assertNotFound();
-    $this->get('/settings')->assertDontSee('Their account');
-    $this->post('/settings', ['name' => 'x', 'period_start_day' => 1, 'accounts' => [$theirAccount->id => 'Hacked']]);
+    $this->get('/settings/accounts')->assertDontSee('Their account');
+    $this->post('/settings/accounts', ['accounts' => [$theirAccount->id => 'Hacked']]);
     $this->post('/categorise', ['merchant_key' => 'WOOLWORTHS', 'money_in' => 0, 'category' => $theirCategory->id])->assertSessionHasErrors('category');
 
     expect($theirAccount->fresh()->name)->toBe('Their account');
@@ -76,9 +78,9 @@ it('filters transactions by budget line, or those not categorised', function () 
     Transaction::factory()->for($account)->create(['description' => 'TAKEALOT', 'category_id' => null]);
 
     $this->actingAs($user)->get("/transactions?category={$groceries->id}")
-        ->assertSee('WOOLWORTHS BELLVILLE')->assertDontSee('TAKEALOT')->assertSee('All categories')
+        ->assertSee('Woolworths Bellville')->assertDontSee('Takealot')->assertSee('All categories')
         ->assertSee('1 transaction')->assertSee('-R123.45');
-    $this->get('/transactions?category=none')->assertSee('TAKEALOT')->assertDontSee('WOOLWORTHS BELLVILLE');
+    $this->get('/transactions?category=none')->assertSee('Takealot')->assertDontSee('Woolworths Bellville');
 });
 
 it('filters transactions by budget month', function () {
@@ -88,10 +90,10 @@ it('filters transactions by budget month', function () {
     Transaction::factory()->for($account)->create(['posted_on' => '2026-08-10', 'description' => 'AUGUST SHOP']);
 
     $this->actingAs($user)->get('/transactions?month=2026-07-01')
-        ->assertSee('JULY SHOP')->assertDontSee('AUGUST SHOP')
+        ->assertSee('July Shop')->assertDontSee('August Shop')
         ->assertSee('July 2026')->assertSee('August 2026')->assertSee('All months');
 
     // A household whose budget month starts on the 25th.
     $user->household->update(['period_start_day' => 25]);
-    $this->get('/transactions?month=2026-07-25')->assertSee('AUGUST SHOP')->assertDontSee('JULY SHOP');
+    $this->get('/transactions?month=2026-07-25')->assertSee('August Shop')->assertDontSee('July Shop');
 });

@@ -110,12 +110,12 @@ it('adds a suggestion, links its history and updates a changed amount', function
     $this->post('/recurring', ['name' => 'PPS', 'match_text' => 'PPS', 'amount' => '6000', 'frequency' => 'monthly', 'day' => 1])
         ->assertSessionHas('status', fn ($s) => str_contains($s, '1 earlier payment linked'));
     $pps = RecurringPayment::sole();
-    $this->get('/recurring')->assertSee('⚠ Amount changed')->assertSee('expected R6,000.00');
-    $this->get('/')->assertSee('Recurring payments')->assertSee('⚠ Amount changed');
+    $this->get('/recurring')->assertSee('<span class="pill warn">Amount changed</span>', false)->assertSee('expected R6,000.00');
+    $this->get('/')->assertSee('Needs attention')->assertSee('PPS amount changed');
 
     $this->post("/recurring/{$pps->id}/use-amount/{$payment->id}")->assertRedirect();
     expect($pps->fresh()->amount_cents)->toBe(863102);
-    $this->get('/recurring')->assertSee('✓ Paid');
+    $this->get('/recurring')->assertSee('1 of 1 paid')->assertDontSee('Amount changed');
     Carbon::setTestNow();
 });
 
@@ -125,12 +125,12 @@ it('marks a late payment as paid elsewhere, and undoes it', function () {
     $this->actingAs($user);
     $this->post('/recurring', ['name' => 'Electricity', 'match_text' => 'PREPAID', 'amount' => '200', 'frequency' => 'monthly', 'day' => 5]);
     $payment = RecurringPayment::sole();
-    $this->get('/recurring')->assertSee('⚠ Late');
+    $this->get('/recurring')->assertSee('<span class="pill warn">Late</span>', false);
 
     $this->post("/recurring/{$payment->id}/mark", ['due_on' => '2026-09-05', 'status' => 'paid']);
-    $this->get('/recurring')->assertSee('✓ Paid (by hand)');
+    $this->get('/recurring')->assertSee('Paid (marked by hand)')->assertDontSee('<span class="pill warn">Late</span>', false);
     $this->post("/recurring/{$payment->id}/mark", ['due_on' => '2026-09-05', 'status' => 'clear']);
-    $this->get('/recurring')->assertSee('⚠ Late');
+    $this->get('/recurring')->assertSee('<span class="pill warn">Late</span>', false);
     Carbon::setTestNow();
 });
 

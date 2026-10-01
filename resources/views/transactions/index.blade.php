@@ -3,75 +3,89 @@
 @section('title', 'Transactions · Budgeteer')
 
 @section('content')
-    <h1>Transactions</h1>
+    <header class="page-head"><h1>Transactions</h1></header>
 
-    <form method="GET" class="filters">
+    <form method="GET" class="filters" role="search">
         @if (request('merchant'))
             <input type="hidden" name="merchant" value="{{ request('merchant') }}">
         @endif
-        <label class="visually-hidden" for="q">Search</label>
-        <input type="search" name="q" id="q" value="{{ request('q') }}" placeholder="Search">
-        <label class="visually-hidden" for="account">Account</label>
-        <select name="account" id="account" data-autosubmit>
-            <option value="">All accounts</option>
-            @foreach ($accounts as $account)
-                <option value="{{ $account->id }}" @selected(request('account') == $account->id)>{{ $account->name }}</option>
-            @endforeach
-        </select>
-        <label class="visually-hidden" for="month">Month</label>
-        <select name="month" id="month" data-autosubmit>
-            <option value="">All months</option>
-            @foreach ($months as $m)
-                <option value="{{ $m->from->toDateString() }}" @selected($month?->from->equalTo($m->from))>{{ $m->label() }}</option>
-            @endforeach
-        </select>
-        <label class="visually-hidden" for="category">Category</label>
-        <select name="category" id="category" data-autosubmit>
-            <option value="">All categories</option>
-            <option value="none" @selected(request('category') === 'none')>Not categorised</option>
-            @foreach (['expense' => 'Budget lines', 'income' => 'Money in'] as $kind => $label)
-                <optgroup label="{{ $label }}">
-                    @foreach ($categories[$kind] ?? [] as $c)
-                        <option value="{{ $c->id }}" @selected((string) request('category') === (string) $c->id)>{{ $c->name }}</option>
+        <label class="search">
+            <x-icon name="search" :size="20" />
+            <span class="visually-hidden">Search</span>
+            <input type="search" name="q" value="{{ request('q') }}" placeholder="Search shops, order items">
+        </label>
+        <div class="pills">
+            <label @class(['pill-select', 'active' => $month !== null])>
+                <span class="visually-hidden">Month</span>
+                <select name="month" data-autosubmit>
+                    <option value="">All months</option>
+                    @foreach ($months as $m)
+                        <option value="{{ $m->from->toDateString() }}" @selected($month?->from->equalTo($m->from))>{{ $m->label() }}</option>
                     @endforeach
-                </optgroup>
-            @endforeach
-        </select>
-        <button type="submit" class="secondary">Show</button>
+                </select>
+                <x-icon name="down" :size="16" />
+            </label>
+            <label @class(['pill-select', 'active' => request()->filled('account')])>
+                <span class="visually-hidden">Account</span>
+                <select name="account" data-autosubmit>
+                    <option value="">All accounts</option>
+                    @foreach ($accounts as $account)
+                        <option value="{{ $account->id }}" @selected(request('account') == $account->id)>{{ $account->name }}</option>
+                    @endforeach
+                </select>
+                <x-icon name="down" :size="16" />
+            </label>
+            <label @class(['pill-select', 'active' => request()->filled('category')])>
+                <span class="visually-hidden">Category</span>
+                <select name="category" data-autosubmit>
+                    <option value="">All categories</option>
+                    <option value="none" @selected(request('category') === 'none')>Not categorised</option>
+                    @foreach (['expense' => 'Budget lines', 'income' => 'Money in'] as $kind => $label)
+                        <optgroup label="{{ $label }}">
+                            @foreach ($categories[$kind] ?? [] as $c)
+                                <option value="{{ $c->id }}" @selected((string) request('category') === (string) $c->id)>{{ $c->name }}</option>
+                            @endforeach
+                        </optgroup>
+                    @endforeach
+                </select>
+                <x-icon name="down" :size="16" />
+            </label>
+            <button type="submit" class="sm secondary search-button" data-autosubmit-hide>Show</button>
+        </div>
     </form>
 
-    @if ($total)
-        <p class="summary-line"><span>{{ $total['count'] }} {{ $total['count'] === 1 ? 'transaction' : 'transactions' }}</span><span>Total <strong @class(['in' => $total['cents'] > 0])>{{ money($total['cents']) }}</strong></span></p>
+    @if ($total || $owners->isNotEmpty())
+        <div class="stack">
+            @if ($total)
+                <p class="summary-line"><span>{{ $total['count'] }} {{ $total['count'] === 1 ? 'transaction' : 'transactions' }}</span><span>Total <strong @class(['in' => $total['cents'] > 0])>{{ money($total['cents']) }}</strong></span></p>
+            @endif
+            @if ($owners->isNotEmpty())
+                <p class="owner-key">
+                    <span class="owner-chip owner-green">Ours</span>
+                    @foreach ($owners as $owner)
+                        <span class="owner-chip owner-{{ $owner->ownerColour() }}">{{ $owner->name }}</span>
+                    @endforeach
+                </p>
+            @endif
+        </div>
     @endif
 
-    @if ($owners->isNotEmpty())
-        <p class="owner-key small">
-            <span class="owner-chip owner-green">Ours</span>
-            @foreach ($owners as $owner)
-                <span class="owner-chip owner-{{ $owner->ownerColour() }}">{{ $owner->name }}</span>
-            @endforeach
-        </p>
-    @endif
-
-    <section class="card">
-        @forelse ($transactions as $t)
-            <a class="row owned owner-{{ $t->ownerColour() ?? 'none' }}" href="{{ route('transactions.edit', $t) }}">
-                <span>
-                    {{ $t->description }}
-                    @if ($t->order)
-                        <span class="small block">{{ $t->order->summary() }}</span>
-                    @endif
-                    <span class="muted small block">
-                        {{ $t->posted_on->format('j M Y') }} · {{ $t->account->name }} ·
-                        @if ($t->is_transfer) Own accounts @elseif ($t->project) Project: <span class="owner-name">{{ $t->project->name }}</span> @elseif ($t->person) <span class="owner-name">{{ $t->person->name }}</span> @else {{ $t->category->name ?? 'Not categorised' }} @endif
-                    </span>
-                </span>
-                <span @class(['amount', 'in' => $t->amount_cents > 0, 'muted' => $t->is_transfer])>{{ money($t->amount_cents) }}</span>
-            </a>
-        @empty
-            <p class="muted">No transactions.</p>
-        @endforelse
-    </section>
+    @forelse ($transactions->groupBy(fn ($t) => $t->posted_on->toDateString()) as $day => $rows)
+        @php($date = \Carbon\CarbonImmutable::parse($day))
+        <section class="section" aria-label="{{ $date->format('l j F Y') }}">
+            <h2 class="day-head">
+                <span>@if ($date->isToday()) Today · @elseif ($date->isYesterday()) Yesterday · @endif{{ $date->format($date->year === now()->year ? 'D j M' : 'D j M Y') }}</span>
+                @if (($dayTotals[$day] ?? 0) !== 0)<span class="muted">{{ money($dayTotals[$day]) }}</span>@endif
+            </h2>
+            <div class="card">
+                @foreach ($rows as $t)
+                    @include('transactions._row', ['t' => $t])
+                @endforeach
+            </div>
+        </section>
+    @empty
+        <div class="card"><p class="empty">No transactions.</p></div>
+    @endforelse
 
     {{ $transactions->links('pagination') }}
 @endsection

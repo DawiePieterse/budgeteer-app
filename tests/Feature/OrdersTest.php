@@ -58,7 +58,7 @@ it('links a Takealot order to its card payment and shows the items', function ()
 
     $this->actingAs($user);
     $this->get('/transactions')->assertSee('Philips Kettle 1.7L, USB-C Cable 1m ×2');
-    $this->get('/transactions?q=kettle')->assertSee('TAKEALOT')->assertSee('1 transaction');
+    $this->get('/transactions?q=kettle')->assertSee('Takealot')->assertSee('1 transaction');
     $this->get('/transactions?q=toaster')->assertSee('No transactions.');
     $this->get("/transactions/{$payment->id}")
         ->assertSee('Takealot order 229999001')->assertSee('R899.00')->assertSee('× 2')

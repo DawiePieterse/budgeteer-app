@@ -9,6 +9,7 @@ use App\Models\Person;
 use App\Models\Project;
 use App\Models\RecurringPayment;
 use App\Models\Transaction;
+use App\Notify\NoticeFinder;
 use App\Recurring\RecurringSchedule;
 use App\Services\BudgetPeriod;
 use App\Services\PersonBalance;
@@ -23,10 +24,11 @@ class HomeController extends Controller
 
     public const LIST = 'list';
 
-    public function __invoke(Request $request, PersonBalance $balances, RecurringSchedule $schedule): View
+    public function __invoke(Request $request, PersonBalance $balances, RecurringSchedule $schedule, NoticeFinder $notices): View
     {
         $household = $request->user()->household;
-        $date = $request->date('in') ? CarbonImmutable::parse($request->date('in')) : CarbonImmutable::today();
+        $today = CarbonImmutable::today();
+        $date = $request->date('in') ? CarbonImmutable::parse($request->date('in')) : $today;
         $period = BudgetPeriod::containing($date, $household->period_start_day);
 
         $rows = Transaction::query()
@@ -67,15 +69,27 @@ class HomeController extends Controller
             Cookie::queue('budget_view', $view, 60 * 24 * 365);
         }
 
+        $budgetLines = array_filter($spending, fn ($row) => ($row['budget'] ?? null) !== null);
+
         return view('home', [
             'budgetView' => $view,
             'period' => $period,
+            // Which month this is, said the way people say it, and the days still to go in this one.
+            'when' => match (true) {
+                $today->between($period->from, $period->to) => 'This month',
+                $today->between($period->next()->from, $period->next()->to) => 'Last month',
+                $today->between($period->previous()->from, $period->previous()->to) => 'Next month',
+                default => $period->label(),
+            },
+            'daysLeft' => $today->between($period->from, $period->to) ? (int) $today->diffInDays($period->to) : null,
+            'spentOnLines' => (int) array_sum(array_column($budgetLines, 'cents')),
             'spending' => $spending,
             'income' => $income,
             'spent' => array_sum(array_column($spending, 'cents')),
             'budgeted' => (int) $categories->where('kind', CategoryKind::Expense)->sum('budget_cents'),
             'received' => array_sum(array_column($income, 'cents')),
-            'toCategorise' => Transaction::query()->whereNull('category_id')->where('is_transfer', false)->whereNull('person_id')->whereNull('project_id')->count(),
+            'toCategorise' => Transaction::query()->toReview()->count(),
+            'statementsDue' => $notices->statementsDue($household, $today),
             'projects' => Project::query()->orderBy('name')->get(),
             'recurring' => $schedule->occurrences(RecurringPayment::query()->where('active', true)->get(), $period),
             // Only people with something open: once someone is all square they drop off until the next purchase.

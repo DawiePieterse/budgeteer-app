@@ -26,6 +26,11 @@ class ProjectController extends Controller
         return redirect()->route('projects.show', $project)->with('status', "Project {$project->name} added. Move its payments here from Categorise or a transaction's page.");
     }
 
+    public function index(): View
+    {
+        return view('projects.index', ['projects' => Project::query()->orderBy('name')->get()]);
+    }
+
     public function show(Project $project): View
     {
         $transactions = $project->transactions()->with('account')->orderByDesc('posted_on')->orderByDesc('id')->get();

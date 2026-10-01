@@ -43,7 +43,7 @@ it('charges a card to someone new and keeps it out of the budget', function () {
         ->assertSee('R123.00')          // our spending
         ->assertDontSee('R500.00')      // his purchase, before his start date, is neither spending nor owed
         ->assertDontSee('Owed to us');  // so he owes nothing yet, and is not listed
-    $this->get('/categorise')->assertDontSee('GAME');
+    $this->get('/categorise')->assertDontSee('Game');
 });
 
 it('counts purchases after the opening balance, less refunds and repayments', function () {
@@ -79,7 +79,7 @@ it('offers his payment into our account as a repayment, and takes it out of inco
     $sam = Person::create(['household_id' => $user->household_id, 'name' => 'Sam Smith', 'opening_balance_cents' => 300000, 'opening_balance_on' => today()->subMonth(), 'payment_reference' => 'sam']);
     $payment = Transaction::factory()->for($cheque)->create(['posted_on' => today(), 'amount_cents' => 100000, 'description' => 'S SMITH SAM REPAY', 'merchant_key' => 'SMITH']);
 
-    $this->actingAs($user)->get("/people/{$sam->id}")->assertSee('Is this Sam Smith paying back?')->assertSee('S SMITH SAM REPAY');
+    $this->actingAs($user)->get("/people/{$sam->id}")->assertSee('Is this Sam Smith paying back?')->assertSee('S Smith Sam Repay');
     $this->post("/people/{$sam->id}/settlements/from/{$payment->id}")->assertRedirect();
 
     expect(app(PersonBalance::class)->owed($sam))->toBe(200000)
@@ -162,7 +162,7 @@ it('charges a purchase to someone new from the transaction page, outside the bud
         ->and($t->fresh()->person_id)->toBe($mary->id)
         ->and($t->fresh()->category_id)->toBe($groceries->id);
     $this->get('/?in=2026-07-15')->assertSee('Owed to us')->assertSee('Aunt Mary');
-    $this->get("/people/{$mary->id}")->assertSee('Bought for Aunt Mary')->assertSee('CHECKERS')->assertDontSee('on the card');
+    $this->get("/people/{$mary->id}")->assertSee('Bought for Aunt Mary')->assertSee('Checkers')->assertDontSee('on the card');
 });
 
 it('charges a single purchase to someone from Categorise without remembering the shop', function () {
@@ -181,7 +181,7 @@ it('charges a single purchase to someone from Categorise without remembering the
     $this->post('/categorise', ['merchant_key' => 'TAKEALOT', 'money_in' => 0, 'category' => 'person:new', 'new_person' => 'Pieter'])
         ->assertSessionHas('status', '1 charged to Pieter, out of the budget. Pieter now owes R800.00.');
     expect(Merchant::where('key', 'TAKEALOT')->exists())->toBeFalse();
-    $this->get('/transactions?category=none&merchant=WOOLWORTHS')->assertSee('WOOLWORTHS A')->assertDontSee('TAKEALOT');
+    $this->get('/transactions?category=none&merchant=WOOLWORTHS')->assertSee('Woolworths A')->assertDontSee('Takealot');
 });
 
 it('settles up in full, and then the person drops off the home screen', function () {
@@ -231,8 +231,9 @@ it('colours each transaction by whose it is: ours green, each person and project
         ->assertSee('owner-chip owner-green">Ours', false)
         ->assertSee('owner-chip owner-pink">Sam', false)
         ->assertSee('owner-chip owner-blue">Laughing Waters', false);
-    foreach (['green' => 'OURS SHOP', 'pink' => 'SAM SHOP', 'blue' => 'FLAT LEVY', 'orange' => 'CAR PARTS', 'none' => 'TO SAVINGS'] as $colour => $description) {
-        expect($page->getContent())->toMatch('#class="row owned owner-'.$colour.'"[^>]*>\s*<span>\s*'.$description.'#');
+    // Each row's icon tile takes the colour; the name of whose it is is written in the row too.
+    foreach (['green' => 'Ours Shop', 'pink' => 'Sam Shop', 'blue' => 'Flat Levy', 'orange' => 'Car Parts', 'none' => 'To Savings'] as $colour => $description) {
+        expect($page->getContent())->toMatch('#class="item owner-'.$colour.'"[^>]*>.*?<span class="item-title clip">'.$description.'</span>#s');
     }
 
     $this->post("/people/{$flat->id}", ['name' => 'Laughing Waters', 'opening_balance' => '0', 'colour' => 'aqua'])->assertSessionHasNoErrors();

@@ -134,7 +134,7 @@ it('links Gmail with read-only access and reads it straight away', function () {
     fakeGmail(['a' => gmailMessage('a', 'card-payment-extra-card', 'Transaction update — 27 Sep 2026 16:19:14')]);
 
     $this->actingAs($user)->get('/gmail/callback?code=x&state=y')
-        ->assertRedirect('/settings')
+        ->assertRedirect('/settings/gmail')
         ->assertSessionHas('status', fn ($s) => str_contains($s, 'is linked') && str_contains($s, 'Read 1 new transaction'));
 
     $connection = GmailConnection::sole();
@@ -175,16 +175,17 @@ it('keeps another household from syncing or unlinking a Gmail link', function ()
     Http::assertNothingSent();
 });
 
-it('shows Gmail, cards and recent emails in settings', function () {
+it('shows Gmail, recent emails and cards in settings', function () {
     $user = member();
     $connection = linkedGmail($user);
     fakeGmail(['a' => gmailMessage('a', 'card-payment-extra-card', 'Transaction update — 27 Sep 2026 16:19:14')]);
     app(GmailSync::class)->sync($connection);
 
-    $this->actingAs($user)->get('/settings')
+    $this->actingAs($user)->get('/settings')->assertOk()->assertSee('Gmail linked');
+    $this->get('/settings/gmail')
         ->assertSee('bank@example.com')
-        ->assertSee('Sam Smith')
-        ->assertSee('TAKEALOT CAPE TOWN');
+        ->assertSee('TAKEALOT CAPE TOWN');   // the bank's own text, as it came in
+    $this->get('/settings/accounts')->assertSee('Sam Smith');
 });
 
 it('reads again emails it could not read before', function () {

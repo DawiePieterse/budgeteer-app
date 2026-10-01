@@ -8,6 +8,7 @@ use App\Notify\PushSender;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class PushController extends Controller
 {
@@ -53,7 +54,8 @@ class PushController extends Controller
         return back()->with('status', 'That phone will no longer get notifications.');
     }
 
-    public function preferences(Request $request): RedirectResponse
+    /** Saved straight away when a switch is flipped (JavaScript), or with the form's Save button. */
+    public function preferences(Request $request): RedirectResponse|Response
     {
         $request->user()->update([
             'notify_recurring' => $request->boolean('notify_recurring'),
@@ -62,6 +64,10 @@ class PushController extends Controller
             'notify_summary' => $request->boolean('notify_summary'),
             'notify_statements' => $request->boolean('notify_statements'),
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->noContent();
+        }
 
         return back()->with('status', 'Notification choices saved.');
     }
