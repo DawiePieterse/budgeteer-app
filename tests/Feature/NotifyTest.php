@@ -218,8 +218,10 @@ it('saves and forgets this phone, and saves choices', function () {
     expect(PushSubscription::count())->toBe(1);
     $this->postJson('/push/subscriptions', ['endpoint' => 'http://evil.test/'] + $body)->assertUnprocessable();
 
-    $this->get('/settings')->assertSee('Phone notifications')->assertSee('Android Chrome');
+    $this->get('/settings')->assertSee('Phone notifications')->assertSee('On for 1 phone or browser');
+    $this->get('/settings/notifications')->assertSee('Android Chrome');
     $this->post('/push/preferences', ['notify_recurring' => '1'])->assertRedirect();
+    $this->postJson('/push/preferences', ['notify_recurring' => '1'])->assertNoContent();   // a switch flipped on the page
     expect($user->fresh()->only(['notify_recurring', 'notify_budget', 'notify_gmail']))->toBe(['notify_recurring' => true, 'notify_budget' => false, 'notify_gmail' => false]);
 
     $this->postJson('/push/subscriptions/delete', ['endpoint' => $body['endpoint']])->assertOk();

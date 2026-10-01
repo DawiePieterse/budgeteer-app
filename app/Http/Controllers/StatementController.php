@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\StatementImport;
+use App\Notify\NoticeFinder;
 use App\Statements\StatementDoesNotAddUp;
 use App\Statements\StatementReaders;
 use App\Statements\StatementText;
 use App\Statements\UnreadableStatement;
 use App\Transactions\StatementImporter;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -19,10 +21,11 @@ class StatementController extends Controller
 {
     private const SESSION_KEY = 'statement_upload';
 
-    public function index(): View
+    public function index(Request $request, NoticeFinder $notices): View
     {
         return view('statements.index', [
             'imports' => StatementImport::query()->with(['account', 'user'])->latest()->limit(50)->get(),
+            'statementsDue' => $notices->statementsDue($request->user()->household, CarbonImmutable::today()),
         ]);
     }
 

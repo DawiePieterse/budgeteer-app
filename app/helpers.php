@@ -1,6 +1,7 @@
 <?php
 
 use App\Statements\Money;
+use App\Support\Readable;
 
 if (! function_exists('money')) {
     /** R1,234.56 from cents, for views. */
@@ -25,5 +26,13 @@ if (! function_exists('rand_whole')) {
     function rand_whole(int $cents): string
     {
         return ($cents < 0 ? '-' : '').'R'.number_format((int) round(abs($cents) / 100), 0, '.', ',');
+    }
+}
+
+if (! function_exists('readable')) {
+    /** Bank text in sentence-style capitals for lists: "WOOLWORTHS CAVENDISH" as "Woolworths Cavendish". */
+    function readable(?string $text): string
+    {
+        return Readable::text($text);
     }
 }

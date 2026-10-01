@@ -14,4 +14,13 @@ enum Bank: string
             self::Discovery => 'Discovery Bank',
         };
     }
+
+    /** Two letters for the bank's tile in lists. */
+    public function initials(): string
+    {
+        return match ($this) {
+            self::StandardBank => 'SB',
+            self::Discovery => 'DB',
+        };
+    }
 }

@@ -12,8 +12,6 @@
         : $label.': '.money($spent).' spent, not on a budget line';
 @endphp
 <{{ $href ? 'a' : 'div' }} {{ $attributes->class(['circle', 'is-over' => $over, 'is-empty' => $spent <= 0, 'no-budget' => ! $hasBudget]) }} @if ($href) href="{{ $href }}" @endif aria-label="{{ $summary }}" title="{{ $summary }}">
-    <span class="circle-name">{{ $label }}</span>
-    <span class="circle-spent">{{ rand_whole($spent) }}</span>
     <svg class="circle-art" width="{{ $size }}" height="{{ $size }}" viewBox="0 0 {{ $size }} {{ $size }}" aria-hidden="true" focusable="false">
         <defs><clipPath id="clip-{{ $id }}"><circle cx="28" cy="28" r="{{ $r }}"/></clipPath></defs>
         <circle class="circle-track" cx="28" cy="28" r="{{ $r }}"/>
@@ -26,9 +24,10 @@
         <circle class="circle-ring" cx="28" cy="28" r="{{ $r }}" fill="none"/>
         <g transform="translate(16 16)"><x-category-icon :icon="$icon" /></g>
     </svg>
+    <span class="circle-name">{{ $label }}</span>
     @if (! $hasBudget)
-        <span class="circle-left"><span class="circle-note">no budget</span></span>
+        <span class="circle-left">{{ rand_whole($spent) }}<span class="circle-note">no budget</span></span>
     @else
-        <span class="circle-left">{{ rand_whole(abs($budget - $spent)) }}<span class="circle-note">@if ($over)<span aria-hidden="true">⚠</span> over @else left @endif</span></span>
+        <span class="circle-left">{{ rand_whole(abs($budget - $spent)) }}<span class="circle-note">{{ $over ? 'over' : 'left' }}</span></span>
     @endif
 </{{ $href ? 'a' : 'div' }}>

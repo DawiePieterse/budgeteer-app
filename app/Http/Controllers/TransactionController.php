@@ -51,10 +51,19 @@ class TransactionController extends Controller
         }
 
         $filtered = collect($request->only(['category', 'account', 'q', 'from', 'month', 'merchant']))->filter()->isNotEmpty();
+        $transactions = (clone $query)->paginate(50)->withQueryString();
+        // Each day's total, with the same filters, over the whole day even when it runs onto the next page.
+        // Money moved between our own accounts is left out: it is neither spent nor received.
+        $days = $transactions->getCollection()->map(fn (Transaction $t) => $t->posted_on->toDateString())->unique()->values();
+        $dayTotals = $days->isEmpty() ? collect() : (clone $query)->reorder()->setEagerLoads([])
+            ->where('is_transfer', false)->whereIn('posted_on', $days->all())
+            ->groupBy('posted_on')->selectRaw('posted_on, sum(amount_cents) as cents')->pluck('cents', 'posted_on')
+            ->mapWithKeys(fn ($cents, $day) => [CarbonImmutable::parse($day)->toDateString() => (int) $cents]);
 
         return view('transactions.index', [
             'total' => $filtered ? ['count' => (clone $query)->count(), 'cents' => (int) (clone $query)->sum('amount_cents')] : null,
-            'transactions' => $query->paginate(50)->withQueryString(),
+            'transactions' => $transactions,
+            'dayTotals' => $dayTotals,
             'owners' => Person::query()->orderBy('name')->get()->concat(Project::query()->orderBy('name')->get()),
             'accounts' => Account::query()->get(),
             'months' => $months,

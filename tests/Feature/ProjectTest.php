@@ -21,10 +21,10 @@ it('keeps a project out of the monthly budget and tracks it on its own page', fu
     expect($motors->fresh()->project_id)->toBe($shrek->id)
         ->and(Merchant::where('key', 'GRAND SLAM')->sole()->project_id)->toBe($shrek->id);
     // Spending shows only the R123; the R20,000 appears only against the project.
-    $this->get('/?in='.today()->toDateString())->assertSee('R123.00')->assertSee('Shrek')->assertSee('R20,000.00 ›', false);
+    $this->get('/?in='.today()->toDateString())->assertSee('R123.00')->assertSee('Shrek')->assertSee('<span class="amount">R20,000.00</span>', false);
     expect(substr_count($this->get('/?in='.today()->toDateString())->getContent(), 'R20,000.00'))->toBe(1);
     $this->get("/projects/{$shrek->id}")->assertOk()->assertSee('R20,000.00')->assertSee('20%')->assertSee('R80,000.00 left');
-    $this->get('/categorise')->assertDontSee('GRAND SLAM');
+    $this->get('/categorise')->assertDontSee('Grand Slam');
 });
 
 it('sends later payments to the same place into the project', function () {
@@ -51,7 +51,7 @@ it('moves a single transaction into a project', function () {
     $this->post("/transactions/{$t->id}", ['project_id' => $shrek->id, 'is_transfer' => 0])->assertRedirect();
 
     expect($t->fresh()->project_id)->toBe($shrek->id);
-    $this->get('/transactions')->assertSee('Project: <span class="owner-name">Shrek</span>', false);
+    $this->get('/transactions')->assertSee('<span class="who">Shrek</span>', false);
 });
 
 it('keeps projects to their own household', function () {

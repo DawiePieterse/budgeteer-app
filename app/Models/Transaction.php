@@ -7,6 +7,8 @@ use App\Enums\TransactionSource;
 use App\Models\Concerns\BelongsToHousehold;
 use App\Support\OwnerColours;
 use Database\Factories\TransactionFactory;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -110,6 +112,24 @@ class Transaction extends Model
             $this->person_id !== null => $this->person?->ownerColour(),
             default => OwnerColours::HOUSEHOLD,
         };
+    }
+
+    /**
+     * Still to be put somewhere: no category, not money moved between own accounts, not anyone else's
+     * and not a special project's. These are what the Review screen lists.
+     *
+     * @param  Builder<Transaction>  $query
+     */
+    #[Scope]
+    protected function toReview(Builder $query): void
+    {
+        $query->whereNull('category_id')->where('is_transfer', false)->whereNull('person_id')->whereNull('project_id');
+    }
+
+    /** The description as people write it, for lists ("Woolworths Cavendish"); the bank's text is on its page. */
+    public function displayName(): string
+    {
+        return readable($this->description);
     }
 
     /**

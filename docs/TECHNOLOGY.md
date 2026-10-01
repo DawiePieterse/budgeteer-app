@@ -13,7 +13,7 @@ Node.js, Docker or always-on workers.
 | Language | PHP 8.3 in production (8.2 or newer supported) |
 | Framework | Laravel 12 |
 | Settings panel | Filament 4 (on Livewire 3 and Alpine.js) |
-| Phone screens | Blade templates, Alpine.js and a small hand-written stylesheet; no JavaScript build step |
+| Phone screens | Blade templates, Alpine.js and one hand-written stylesheet with light and dark colours; the Geist font served from `public/fonts`; no JavaScript build step |
 | PWA | Hand-written `manifest.webmanifest` and `sw.js` in `public/`; installable on iPhone and Android |
 | Database | MariaDB 10.11 in production; MySQL 8 in CI; MariaDB for local and cloud development |
 | Hosting | Afrihost Bronze Pro shared cPanel hosting (the Bowls Buddy package), LiteSpeed web server |
@@ -92,7 +92,7 @@ large and mostly unused here.
 3. **Parse.** Each message is fetched, matched to a parser by sender and subject (`DiscoveryEmailParser`), and
    turned into amount, date and time, merchant, account and card number endings, cardholder and kind
    (purchase, refund, cash, money in). Declined purchases are skipped. An email that is not understood is
-   logged as "Not read" with the reason, visible under Settings → Latest bank emails.
+   logged as "Not read" with the reason, visible under More › Bank emails › Latest bank emails.
 4. **De-duplicate.** Every email is recorded once in `ingested_emails` by Gmail message ID. A purchase that is
    both emailed and on a statement is one transaction: whichever arrives second is matched to the first on
    account, exact amount and date (the statement may be up to 4 days later), never on the merchant name. The
@@ -184,7 +184,7 @@ Each step runs only if the one before did not decide:
 
 ### A card kept for someone else
 
-*Built:* a card's owner is set in Settings → Cards. Transactions on it get `person_id` and leave the budget
+*Built:* a card's owner is set in More › Accounts and cards. Transactions on it get `person_id` and leave the budget
 and the categorise list. What the person owes is `opening_balance_cents` (as of `opening_balance_on`) plus
 their transactions after that date, less `settlements`. Transactions from before the opening date leave the
 budget but are not added again, because the opening balance already includes them. A payment into an own

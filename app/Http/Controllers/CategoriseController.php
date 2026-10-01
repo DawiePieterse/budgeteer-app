@@ -50,7 +50,7 @@ class CategoriseController extends Controller
 
         return view('categorise', [
             'groups' => $groups,
-            'remaining' => Transaction::query()->whereNull('category_id')->where('is_transfer', false)->whereNull('person_id')->whereNull('project_id')->count(),
+            'remaining' => Transaction::query()->toReview()->count(),
             'categories' => Category::query()->orderBy('kind')->orderBy('sort')->get()->groupBy(fn (Category $c) => $c->kind->value),
             'projects' => Project::query()->orderBy('name')->get(),
             'people' => Person::query()->orderBy('name')->get(),

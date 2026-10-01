@@ -88,7 +88,7 @@ It reads new bank emails from every linked Gmail account.
 
 1. Open `https://budget.bowlsbuddy.co.za/privacy`: the privacy page shows without signing in.
 2. Open `https://budget.bowlsbuddy.co.za` and **Sign in with Google**.
-3. In **Settings**, set the budget month start day and the names on payments between your own accounts
+3. In **More › Household**, set the budget month start day and the names on payments between your own accounts
    (for example `DJ PIETERSE`), then add statements under **Statements**.
 
 ## Reading bank emails (Gmail)
@@ -115,7 +115,7 @@ For online orders, make a second filter the same way: search `from:(info@takealo
 the same `Budgeteer` label, and **Also apply filter to matching conversations**. Then read the older ones once:
 `php artisan budgeteer:gmail-sync --since=2026-07-01`.
 
-In **Budgeteer**: Settings → **Link Gmail**. Google warns that the app is not verified: click **Advanced**,
+In **Budgeteer**: More › Bank emails → **Link Gmail**. Google warns that the app is not verified: click **Advanced**,
 then **Go to budget.bowlsbuddy.co.za**, then tick **View your email messages and settings** and **Continue**.
 The first 30 days of labelled emails are read straight away; after that the cron job checks every 5 minutes.
 
@@ -129,12 +129,12 @@ PHP=/opt/cpanel/ea-php83/root/usr/bin/php
 $PHP artisan budgeteer:push-keys && $PHP artisan config:cache
 ```
 
-Then each person, on each phone: Budgeteer → Settings → **Turn on for this phone** → allow, then
+Then each person, on each phone: Budgeteer → More › Phone notifications → **Turn on** → allow, then
 **Send a test notification**.
 
 - **Android** (Chrome or Samsung Internet): works straight from the browser.
 - **iPhone** (iOS 16.4 or newer): open Budgeteer in Safari, **Share → Add to Home Screen**, open it from the
-  new icon, then turn notifications on in Settings there.
+  new icon, then turn notifications on in More › Phone notifications there.
 
 The cron job checks every 15 minutes between 07:00 and 20:30 (`budgeteer:notify`) and sends each warning once:
 a recurring payment late or its amount changed, a budget line at 80% or over, the whole budget over, bank

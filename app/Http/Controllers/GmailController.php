@@ -29,19 +29,19 @@ class GmailController extends Controller
     public function callback(Request $request, GmailSync $sync): RedirectResponse
     {
         if ($request->has('error')) {
-            return redirect()->route('settings')->with('error', 'Gmail was not linked.');
+            return redirect()->route('settings.gmail')->with('error', 'Gmail was not linked.');
         }
         try {
             $google = $this->google()->user();
         } catch (InvalidStateException) {
-            return redirect()->route('settings')->with('error', 'Linking took too long. Please try again.');
+            return redirect()->route('settings.gmail')->with('error', 'Linking took too long. Please try again.');
         }
 
         if (! in_array(self::SCOPE, $google->approvedScopes ?? [], true)) {
-            return redirect()->route('settings')->with('error', 'Budgeteer needs the tick next to "View your email messages and settings" to read bank emails. Please link again and tick it.');
+            return redirect()->route('settings.gmail')->with('error', 'Budgeteer needs the tick next to "View your email messages and settings" to read bank emails. Please link again and tick it.');
         }
         if (! is_string($google->refreshToken) || $google->refreshToken === '') {
-            return redirect()->route('settings')->with('error', 'Google did not give lasting access. Please remove Budgeteer under your Google account\'s third-party access, then link again.');
+            return redirect()->route('settings.gmail')->with('error', 'Google did not give lasting access. Please remove Budgeteer under your Google account\'s third-party access, then link again.');
         }
 
         $connection = GmailConnection::updateOrCreate(
@@ -59,7 +59,7 @@ class GmailController extends Controller
 
         $result = $sync->sync($connection, 20);
 
-        return redirect()->route('settings')->with('status', "Gmail {$connection->email} is linked. ".$this->summary($result));
+        return redirect()->route('settings.gmail')->with('status', "Gmail {$connection->email} is linked. ".$this->summary($result));
     }
 
     public function sync(GmailConnection $connection, GmailSync $sync): RedirectResponse

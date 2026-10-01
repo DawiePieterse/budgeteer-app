@@ -3,9 +3,14 @@
 @section('title', 'Privacy · Budgeteer')
 
 @section('content')
-    <h1>Privacy</h1>
+    @auth
+        <x-back :href="route('settings')" label="More" />
+    @else
+        <x-back :href="route('login')" label="Sign in" />
+    @endauth
+    <header class="page-head"><h1>Privacy</h1></header>
 
-    <section class="card">
+    <section class="card prose">
         <p>Budgeteer is a private household budget app for the members of one household. It is not offered to the public, and only people on the household's list can sign in.</p>
 
         <h2>What it keeps</h2>
