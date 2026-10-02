@@ -65,7 +65,9 @@ Laravel 12 for the Afrihost shared hosting that runs Bowls Buddy.
   orange, aqua, violet, yellow, handed out in turn and changeable on their page), with the name beside it.
   A row still to review has an amber "?" instead.
 - **Budget circles:** the home screen shows a circle per budget line, filled from the bottom with the share
-  used, with what is left (or over) under it; over budget turns red. **List** switches to the bars; each
+  used, with what is left (or over) under it, each in a tile with a thin border: the border and the words are
+  green while the line is within budget and red once over ("Other", with no budget, is grey). Three tiles a
+  row on a phone. **List** switches to the bars; each
   phone remembers its choice. Each line has an icon, guessed from its name and changeable by tapping it on
   the Budget screen.
 - **Online orders:** Takealot payment confirmations and Amazon.co.za "Ordered" emails (labelled

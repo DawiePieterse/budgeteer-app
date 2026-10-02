@@ -580,7 +580,7 @@ details.disclosure[open] > summary .chev.down { transform: rotate(180deg); }
 .head-period { display: none; }
 @media (min-width: 64rem) { .head-period { display: flex; min-width: 20rem; } }
 
-.budget-card { padding: 1.25rem 0.875rem; }
+.budget-card { padding: 0.875rem 0.625rem; }
 .budget-card .lines { padding: 0 0.125rem; }
 .more-lines { grid-column: 1 / -1; }
 .more-lines > summary { padding: 0.75rem 0 0.25rem; color: var(--link); font-weight: 600; cursor: pointer; }
@@ -619,10 +619,20 @@ a.line:hover .line-name { color: var(--link); }
 .meter { display: flex; flex-direction: column; gap: 0.375rem; }
 .meter-foot { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.875rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
 
-/* Budget circles */
-.circles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem 0.375rem; }
-@media (min-width: 34rem) and (max-width: 63.99rem) { .circles { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
-.circle { display: flex; flex-direction: column; align-items: center; gap: 0.375rem; text-align: center; color: var(--text); text-decoration: none; min-width: 0; }
+/* Budget circles: each line in its own tile, with a thin border and its words in one status colour,
+   green while within budget and red once over ("Other", with no budget, stays grey). The colour is
+   never alone: "left" or "over" is always written under the amount. */
+/* Three to a row on a phone, so names like "Kruideniers" fit inside the border without breaking. */
+.circles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+@media (min-width: 34rem) and (max-width: 63.99rem) { .circles { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.circle {
+    --status: var(--in);
+    display: flex; flex-direction: column; align-items: center; gap: 0.375rem; min-width: 0;
+    padding: 0.625rem 0.25rem 0.5rem; border: 1.5px solid var(--status); border-radius: 0.875rem;
+    text-align: center; color: var(--status); text-decoration: none;
+}
+.circle.is-over { --status: var(--out); }
+.circle.no-budget { --status: var(--muted); }
 .circle-art { display: block; color: var(--circle-ink); }
 .circle-track { fill: var(--circle-track); }
 .circle-fill { fill: var(--circle-fill); }
@@ -630,17 +640,16 @@ a.line:hover .line-name { color: var(--link); }
 .circle-ring { stroke: var(--circle-ring); stroke-width: 2; }
 .circle-name { font-size: 0.8125rem; font-weight: 600; line-height: 1.25; min-height: 2.5em; overflow-wrap: anywhere; hyphens: auto; }
 .circle-left { display: flex; flex-direction: column; align-items: center; font-size: 0.875rem; font-weight: 700; line-height: 1.2; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.circle-note { font-size: 0.75rem; font-weight: 400; color: var(--muted); }
-.circle.is-over .circle-note { color: var(--out); font-weight: 700; }
+.circle-note { font-size: 0.75rem; font-weight: 500; }
+.circle.is-over .circle-note { font-weight: 700; }
 .circle.is-over .circle-fill { fill: var(--circle-over-fill); }
 .circle.is-over .circle-ring { stroke: var(--circle-over-ring); stroke-width: 3; }
-.circle.is-over .circle-left { color: var(--out); }
-.circle.is-empty .circle-name, .circle.is-empty .circle-left { color: var(--muted); }
 .circle.no-budget .circle-track { fill: var(--line); }
 .circle.no-budget .circle-ring { stroke: var(--muted); }
 .circle.no-budget .circle-art { color: var(--text); }
-.circle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 0.5rem; }
-.circle:hover .circle-name { color: var(--link); }
+.circle:hover { background: var(--bg); }
+.circle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (min-width: 64rem) { .circles { gap: 0.75rem; } }
 
 /* A small bar inside a row (a project's budget) */
 .item .bar { margin: 0.375rem 0; }
