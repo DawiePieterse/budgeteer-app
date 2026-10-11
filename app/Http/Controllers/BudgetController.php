@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Enums\CategoryKind;
 use App\Models\Category;
+use App\Models\CategoryGroup;
 use App\Models\Merchant;
 use App\Models\Transaction;
 use App\Services\BudgetList;
 use App\Services\BudgetPeriod;
 use App\Statements\Money;
 use App\Support\CategoryIcons;
+use App\Support\GroupColours;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,6 +29,7 @@ class BudgetController extends Controller
 
         return view('budget', [
             'categories' => $categories,
+            'groups' => CategoryGroup::query()->orderBy('sort')->orderBy('name')->get(),
             'used' => $used,
             'total' => (int) $categories->where('kind', CategoryKind::Expense)->sum('budget_cents'),
             'period' => $period,
@@ -42,6 +45,8 @@ class BudgetController extends Controller
             'name.*' => ['required', 'string', 'max:100'],
             'icon' => ['array'],
             'icon.*' => ['nullable', Rule::in(array_keys(CategoryIcons::ICONS))],
+            'group' => ['array'],
+            'group.*' => ['nullable', Rule::in(CategoryGroup::query()->pluck('id')->all())],
             'new_name' => ['nullable', 'string', 'max:100'],
             'new_kind' => ['nullable', Rule::enum(CategoryKind::class)],
             'new_budget' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
@@ -53,6 +58,7 @@ class BudgetController extends Controller
                 'name' => trim($data['name'][$category->id]),
                 'budget_cents' => $amount === null || $amount === '' ? null : (int) round(((float) $amount) * 100),
                 'icon' => array_key_exists($category->id, $data['icon'] ?? []) ? ($data['icon'][$category->id] ?: null) : $category->icon,
+                'category_group_id' => array_key_exists($category->id, $data['group'] ?? []) ? ((int) $data['group'][$category->id] ?: null) : $category->category_group_id,
             ]);
         }
         if (filled($data['new_name'] ?? null)) {
@@ -83,7 +89,7 @@ class BudgetController extends Controller
                 $category = Category::create(['name' => mb_substr($item['name'], 0, 100), 'kind' => CategoryKind::Expense, 'sort' => ++$sort]);
                 $created++;
             }
-            $category->update(['budget_cents' => $item['cents']]);
+            $category->update(['budget_cents' => $item['cents']] + ($item['group'] !== null ? ['category_group_id' => CategoryGroup::named($item['group'])->id] : []));
         }
 
         $total = array_sum(array_column($items, 'cents'));
@@ -114,11 +120,68 @@ class BudgetController extends Controller
             Merchant::query()->update(['category_id' => null]);
             Category::query()->whereIn('id', $spending)->delete();
             foreach ($items as $sort => $item) {
-                Category::create(['name' => mb_substr($item['name'], 0, 100), 'kind' => CategoryKind::Expense, 'budget_cents' => $item['cents'], 'sort' => $sort]);
+                Category::create(['name' => mb_substr($item['name'], 0, 100), 'kind' => CategoryKind::Expense, 'budget_cents' => $item['cents'], 'sort' => $sort,
+                    'category_group_id' => $item['group'] !== null ? CategoryGroup::named($item['group'])->id : null]);
             }
         });
 
         return redirect()->route('categorise')->with('status', count($items).' budget lines are now your categories. Assign each group below; Budgeteer suggests a line where the names match.');
+    }
+
+    /**
+     * The household's groups: renamed, recoloured and added in one go; and, with the button pressed,
+     * one moved up or removed. Removing a group leaves its lines without a group.
+     */
+    public function groups(Request $request): RedirectResponse
+    {
+        $groups = CategoryGroup::query()->orderBy('sort')->orderBy('name')->get();
+        $data = $request->validate([
+            'group_name' => ['array'],
+            'group_name.*' => ['required', 'string', 'max:60', 'distinct:ignore_case'],
+            'group_colour' => ['array'],
+            'group_colour.*' => [Rule::in(array_keys(GroupColours::CHOICES))],
+            'new_group' => ['nullable', 'string', 'max:60'],
+            'action' => ['nullable', 'string', 'regex:/^(up|remove):\d+$/'],
+        ], ['group_name.*.distinct' => 'Two groups cannot have the same name.']);
+
+        $names = collect($data['group_name'] ?? [])->map(fn ($name) => trim((string) $name));
+        $new = trim((string) ($data['new_group'] ?? ''));
+        $taken = $groups->mapWithKeys(fn (CategoryGroup $g) => [$g->id => mb_strtolower($names->get($g->id, $g->name))]);
+        if ($new !== '' && $taken->contains(mb_strtolower($new))) {
+            return back()->withInput()->withErrors(['new_group' => "There is already a group called \"{$new}\"."]);
+        }
+
+        DB::transaction(function () use ($groups, $names, $data, $new) {
+            // Renamed groups first get a name no one types, so two can swap names without a clash.
+            foreach ($groups->filter(fn (CategoryGroup $g) => $names->get($g->id, $g->name) !== $g->name) as $group) {
+                $group->update(['name' => "\u{2060}{$group->id}"]);
+            }
+            foreach ($groups as $i => $group) {
+                $group->update([
+                    'name' => $names->get($group->id, $group->name),
+                    'colour' => $data['group_colour'][$group->id] ?? $group->colour,
+                    'sort' => $i, // numbered afresh, so moving up is a swap with the one before
+                ]);
+            }
+            if ($new !== '') {
+                CategoryGroup::create(['name' => $new]);
+            }
+        });
+
+        [$action, $id] = isset($data['action']) ? explode(':', $data['action']) : [null, null];
+        $group = $id !== null ? $groups->firstWhere('id', (int) $id) : null;
+        if ($action === 'up' && $group !== null && $group->sort > 0) {
+            $above = $groups->firstWhere('sort', $group->sort - 1);
+            $above?->update(['sort' => $group->sort]);
+            $group->update(['sort' => $group->sort - 1]);
+        }
+        if ($action === 'remove' && $group !== null) {
+            $group->delete();
+
+            return back()->with('status', "Group \"{$group->name}\" removed; its lines are now without a group.");
+        }
+
+        return back()->with('status', $new !== '' ? "Group \"{$new}\" added. Choose it under a line's name above." : 'Groups saved.');
     }
 
     /** Moves everything in one category into another and removes the first. */

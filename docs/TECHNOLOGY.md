@@ -51,7 +51,7 @@ large and mostly unused here.
 
 | Where | What |
 |---|---|
-| `app/Models` | `Household`, `User`, `GmailConnection`, `IngestedEmail`, `Account`, `Transaction`, `TransactionSplit`, `Category`, `Budget`, `Rule`, `Merchant`, `Person`, `Receivable`, `Settlement`, `RecurringPayment`, `RecurringOccurrence` |
+| `app/Models` | `Household`, `User`, `GmailConnection`, `IngestedEmail`, `Account`, `Transaction`, `TransactionSplit`, `Category`, `CategoryGroup`, `Budget`, `Rule`, `Merchant`, `Person`, `Receivable`, `Settlement`, `RecurringPayment`, `RecurringOccurrence` |
 | `app/Services/Gmail` | OAuth tokens, `history.list` sync, message fetch |
 | `app/Parsers` | One parser per bank or card sender (`DiscoveryBankParser`, `StandardBankParser`), plus `ClaudeParser` as the fallback |
 | `app/Statements` | Statement readers per bank (`Readers/StandardBankReader`, `Readers/DiscoveryBankReader`) and the balance check |

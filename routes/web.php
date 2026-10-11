@@ -54,6 +54,7 @@ Route::middleware(['auth', 'throttle:120,1'])->group(function () {
     Route::post('/budget/merge', [BudgetController::class, 'merge'])->name('budget.merge');
     Route::post('/budget/reset', [BudgetController::class, 'reset'])->name('budget.reset');
     Route::post('/budget/tidy', [BudgetController::class, 'tidy'])->name('budget.tidy');
+    Route::post('/budget/groups', [BudgetController::class, 'groups'])->name('budget.groups');
 
     Route::get('/recurring', [RecurringController::class, 'index'])->name('recurring.index');
     Route::post('/recurring', [RecurringController::class, 'store'])->name('recurring.store');
