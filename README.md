@@ -100,7 +100,7 @@ Laravel 12 for the Afrihost shared hosting that runs Bowls Buddy.
 | `app/Recurring` | Recurring payment schedules, matching and suggestions |
 | `app/Orders` | Takealot and Amazon.co.za order parsing and matching to card payments |
 | `app/Notify` | Finding warnings and sending web push notifications |
-| `app/Services`, `app/Support` | Budget periods and lists, balances owed, icons and colours |
+| `app/Services`, `app/Support` | Budget periods and lists, the month's sums (`MonthSummary`), balances owed, icons and colours |
 | `resources/views`, `public` | Screens, the stylesheet (`public/css/app.css`), the font, `manifest.webmanifest` and the service worker |
 | `tests` | Pest feature and unit tests with made-up statements and emails |
 
