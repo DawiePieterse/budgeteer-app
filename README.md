@@ -10,7 +10,7 @@ Laravel 12 for the Afrihost shared hosting that runs Bowls Buddy.
 | Banks read | Discovery Bank and Standard Bank (statements and emails) |
 | Other sources | Gmail API (read-only), Takealot and Amazon.co.za order emails |
 | Jobs | cPanel cron runs `php artisan schedule:run` every 5 minutes |
-| Docs | [docs/TECHNOLOGY.md](docs/TECHNOLOGY.md) (stack), [docs/DEPLOY.md](docs/DEPLOY.md) (deploying) |
+| Docs | [docs/TECHNOLOGY.md](docs/TECHNOLOGY.md) (stack), [docs/DEPLOY.md](docs/DEPLOY.md) (deploying), [docs/DESKTOP-PLAN.md](docs/DESKTOP-PLAN.md) (desktop overview, planned) |
 
 ## What works so far
 
