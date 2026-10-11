@@ -9,7 +9,7 @@
 :root {
     --bg: #f5f5f7; --card: #ffffff; --text: #1d1d1f; --text-2: #424245; --muted: #86868b; --line: #e8e8ed; --track: #ececf0;
     --blue: #007aff; --green: #34c759; --red: #ff3b30; --orange: #ff9500; --indigo: #5856d6; --pink: #ff2d55; --teal: #30b0c7;
-    --bills: var(--indigo); --everyday: var(--orange); --subs: var(--pink); --savings: var(--green);
+    --g1: var(--indigo); --g2: var(--orange); --g3: var(--teal); --g4: var(--pink);
     --shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 24px rgba(0,0,0,.05);
 }
 :root[data-theme="dark"] {
@@ -128,9 +128,9 @@ td.num, th.num { text-align: right; }
                 <div class="foot"><span class="note">of R42,000 · R1,123 a day</span><svg id="ring" width="44" height="44"></svg></div>
             </section>
             <section class="card kpi c3">
-                <p class="label"><span class="dot" style="background:var(--indigo)"></span>Saved</p>
-                <p class="value">R6,000</p>
-                <div class="foot"><span class="chip good">11% of income</span><span class="note">avg 9%</span></div>
+                <p class="label"><span class="dot" style="background:var(--indigo)"></span>In − spent</p>
+                <p class="value">+R26,100</p>
+                <div class="foot"><span class="note">12-month average +R11,300</span><svg id="spark-net" width="96" height="30"></svg></div>
             </section>
 
             <section class="card c8">
@@ -150,8 +150,8 @@ td.num, th.num { text-align: right; }
 
             <section class="card c4">
                 <div class="card-head">
-                    <div><h2>This month's pace</h2><p class="sub">Spent day by day</p></div>
-                    <div class="legend"><span><span class="dot" style="background:var(--blue)"></span>Oct</span><span><span class="dot" style="background:var(--muted)"></span>Sep</span></div>
+                    <div><h2>This month's pace</h2><p class="sub">Spent so far, day by day</p></div>
+                    <div class="legend"><span><span class="dot" style="background:var(--blue)"></span>Oct</span><span><span class="dot" style="background:var(--muted)"></span>Sep</span><span><span class="dash"></span>Even pace</span></div>
                 </div>
                 <svg id="pace" width="100%" height="190"></svg>
             </section>
@@ -167,7 +167,7 @@ td.num, th.num { text-align: right; }
             <section class="card c12">
                 <div class="card-head">
                     <div><h2>Budget lines</h2><p class="sub">This month, with the last 6 months</p></div>
-                    <div class="seg"><span class="on">All</span><span>Bills</span><span>Everyday</span><span>Subscriptions</span><span>Savings</span></div>
+                    <div class="seg"><span class="on">All</span><span>Home and bills</span><span>Food</span><span>Car</span><span>Lifestyle</span></div>
                 </div>
                 <table>
                     <thead><tr><th>Line</th><th class="num">Budget</th><th class="num">Spent</th><th class="num">Left</th><th style="width:22%">Used</th><th>Last 6 months</th><th class="num">Status</th></tr></thead>
@@ -188,7 +188,7 @@ const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).
 const months = ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'];
 const spent = [39800, 41200, 47900, 38500, 40100, 43600, 39200, 41800, 44900, 40300, 42700, 27400];
 const income = [52000, 52000, 61000, 52000, 52000, 53500, 53500, 53500, 53500, 53500, 53500, 53500];
-const budget = [40000, 40000, 40000, 40000, 42000, 42000, 42000, 42000, 42000, 42000, 42000, 42000];
+const budget = Array(12).fill(42000); // today's budget for every month
 
 function spark(id, data, colour) {
     const s = document.getElementById(id), w = +s.getAttribute('width'), h = +s.getAttribute('height');
@@ -197,6 +197,7 @@ function spark(id, data, colour) {
     el('circle', { cx: x(data.length - 1), cy: y(data.at(-1)), r: 2.5, fill: colour }, s);
 }
 spark('spark-in', income, css('--green'));
+spark('spark-net', [12200, 10800, 13100, 13500, 11900, 9900, 14300, 11700, 8600, 13200, 10800], css('--indigo'));
 spark('spark-out', [39800, 41200, 47900, 38500, 40100, 43600, 39200, 41800, 44900, 40300, 42700], css('--blue'));
 
 // Ring: the share of the budget used.
@@ -222,7 +223,7 @@ spark('spark-out', [39800, 41200, 47900, 38500, 40100, 43600, 39200, 41800, 4490
 })();
 
 // Donut by group.
-const groups = [['Bills', 14200, '--bills'], ['Everyday', 12050, '--everyday'], ['Subscriptions', 1150, '--subs'], ['Savings', 6000, '--savings']];
+const groups = [['Home and bills', 14200, '--g1'], ['Food', 9050, '--g2'], ['Car', 2960, '--g3'], ['Lifestyle', 1190, '--g4']];
 (() => { const s = document.getElementById('donut'), r = 60, c = 2 * Math.PI * r, total = groups.reduce((a, g) => a + g[1], 0); let off = 0;
     groups.forEach(([n, v, col]) => { const len = c * v / total; el('circle', { cx: 75, cy: 75, r, fill: 'none', stroke: css(col), 'stroke-width': 18, 'stroke-dasharray': `${Math.max(0, len - 3)} ${c}`, 'stroke-dashoffset': -off, transform: 'rotate(-90 75 75)' }, s); off += len; });
     const t1 = el('text', { x: 75, y: 72, 'text-anchor': 'middle', 'font-size': 18, 'font-weight': 700 }, s); t1.textContent = R(total); t1.style.fill = css('--text');
@@ -248,21 +249,21 @@ const groups = [['Bills', 14200, '--bills'], ['Everyday', 12050, '--everyday'], 
 })();
 
 // Budget vs real per group: a track for the budget, filled to what is spent.
-document.getElementById('bvr').innerHTML = [['Bills', 14200, 14400, '--bills'], ['Everyday', 12050, 19500, '--everyday'], ['Subscriptions', 1150, 1200, '--subs'], ['Savings', 6000, 6000, '--savings'], ['Not on a line', 0, 900, '--muted']].slice(0, 4).concat([['Total', 33400, 41100, '--blue']]).map(([n, v, bud, col]) =>
+document.getElementById('bvr').innerHTML = [['Home and bills', 14200, 14400, '--g1'], ['Food', 9050, 15500, '--g2'], ['Car', 2960, 6000, '--g3'], ['Lifestyle', 1190, 6100, '--g4'], ['Total', 27400, 42000, '--blue']].map(([n, v, bud, col]) =>
     `<div style="margin-bottom:15px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="font-weight:500">${n}</span><span><b>${R(v)}</b> <span style="color:var(--muted)">of ${R(bud)}</span></span></div><div class="prog" style="height:8px;border-radius:4px"><div style="width:${Math.min(100, v / bud * 100)}%;background:var(${col})"></div></div></div>`).join('');
 
 document.getElementById('changes').innerHTML = [['Eating out', 'R2,760 against R2,000', '+38%', 'up'], ['Fuel', 'R3,940 against R3,260', '+21%', 'up'], ['Groceries', 'R9,120 against R10,020', '−9%', 'down'], ['Clothing', 'R640 against R1,160', '−45%', 'down']].map(([n, s, p, d]) =>
     `<div class="change"><div class="who"><b>${n}</b><span>${s}</span></div><span class="pct ${d}">${p}</span></div>`).join('');
 
 const lines = [
-    ['Bond', '--bills', 9800, 9800, 'Paid 1 Oct', [9800, 9800, 9800, 9800, 9800, 9800]],
-    ['Groceries', '--everyday', 10000, 6840, '', [9600, 10400, 9900, 10200, 10100, 9120]],
-    ['Levies', '--bills', 2810, 2810, 'Paid 3 Oct', [2690, 2690, 2810, 2810, 2810, 2810]],
-    ['Fuel', '--everyday', 3500, 2310, '', [3100, 3300, 3200, 3400, 2950, 3940]],
-    ['Eating out', '--everyday', 2000, 2210, '', [1800, 2300, 1900, 2100, 1950, 2760]],
-    ['Insurance', '--bills', 1600, 1590, 'Paid 1 Oct', [1540, 1540, 1590, 1590, 1590, 1590]],
-    ['Streaming and apps', '--subs', 1200, 1150, 'Due 28 Oct', [1100, 1100, 1150, 1150, 1150, 1150]],
-    ['Emergency fund', '--savings', 4000, 4000, 'Done', [3000, 4000, 4000, 4000, 4000, 4000]],
+    ['Bond', '--g1', 9800, 9800, 'Paid 1 Oct', [9800, 9800, 9800, 9800, 9800, 9800]],
+    ['Groceries', '--g2', 10000, 6840, '', [9600, 10400, 9900, 10200, 10100, 9120]],
+    ['Levies', '--g1', 2810, 2810, 'Paid 3 Oct', [2690, 2690, 2810, 2810, 2810, 2810]],
+    ['Fuel', '--g3', 3500, 2310, '', [3100, 3300, 3200, 3400, 2950, 3940]],
+    ['Eating out', '--g2', 2000, 2210, '', [1800, 2300, 1900, 2100, 1950, 2760]],
+    ['Car insurance', '--g3', 1600, 1590, 'Paid 1 Oct', [1540, 1540, 1590, 1590, 1590, 1590]],
+    ['Streaming and apps', '--g4', 1200, 1150, 'Due 28 Oct', [1100, 1100, 1150, 1150, 1150, 1150]],
+    ['Electricity', '--g1', 1800, 1590, 'Paid 2 Oct', [1950, 1700, 1650, 1600, 1720, 1810]],
 ];
 document.getElementById('lines').innerHTML = lines.map(([n, col, bud, sp, st, hist], i) => {
     const left = bud - sp, over = left < 0;
@@ -271,7 +272,7 @@ document.getElementById('lines').innerHTML = lines.map(([n, col, bud, sp, st, hi
         <td class="num ${over ? 'left-over' : left === 0 ? '' : 'left-ok'}">${over ? R(-left) + ' over' : R(left)}</td>
         <td><div class="prog"><div style="width:${Math.min(100, sp / bud * 100)}%;background:${over ? 'var(--red)' : `var(${col})`}"></div></div></td>
         <td><svg id="ls${i}" width="110" height="24"></svg></td>
-        <td class="num"><span class="status ${st.startsWith('Paid') || st === 'Done' ? 'paid' : ''}">${st}</span></td></tr>`;
+        <td class="num"><span class="status ${st.startsWith('Paid') ? 'paid' : ''}">${st}</span></td></tr>`;
 }).join('');
 lines.forEach((ln, i) => spark('ls' + i, ln[5], css(ln[1])));
 </script>
