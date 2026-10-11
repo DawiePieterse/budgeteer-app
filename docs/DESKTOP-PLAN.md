@@ -148,7 +148,7 @@ Each step is a branch merged into `main` with `composer check` green, and leaves
 
 | # | Step | Visible change | Tests |
 |---|---|---|---|
-| 1 | `MonthSummary`; Home reads from it | None | Sums and exclusions; Home tests unchanged |
+| 1 | `MonthSummary`; Home reads from it (done) | None | Sums and exclusions; Home tests unchanged |
 | 2 | Groups: table and column, Groups section and select on Budget, sections in pasted budgets | Groups on Budget | Adding, renaming, removing (lines become ungrouped), colours in turn, pasting with sections |
 | 3 | Overview screen with the look: tiles, Budget vs real, Budget lines table (no sparklines yet); sidebar item | New screen | Each panel's numbers; excluded transactions; no groups yet; empty household |
 | 4 | `Trends` and the charts: Spending and budget, Where it went, This month's pace, sparklines; range control | Charts | `Charts` geometry; `Trends` bucketing with a start day of 25; chart labels carry the numbers |
