@@ -29,3 +29,12 @@ function drawIcon(select) {
 document.querySelectorAll('select[data-icon-pick]').forEach((select) => {
     select.addEventListener('change', () => drawIcon(select));
 });
+
+// A group's chosen colour shows straight away; it is kept once the groups are saved.
+document.querySelectorAll('select[data-group-colour]').forEach((select) => {
+    select.addEventListener('change', () => {
+        const row = select.closest('.group-row');
+        [...(row?.classList ?? [])].filter((name) => name.startsWith('group-colour-')).forEach((name) => row.classList.remove(name));
+        row?.classList.add(`group-colour-${select.value}`);
+    });
+});

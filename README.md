@@ -46,7 +46,9 @@ Laravel 12 for the Afrihost shared hosting that runs Bowls Buddy.
   type in), what they bought, repayments, and a WhatsApp reminder; payments into your accounts that mention
   them are offered as repayments with one tap.
 - **Budget** (a tab with Monthly, Recurring and Projects): a monthly amount per line, changed in place with
-  one Save, or pasted straight from a spreadsheet (one line per item, the amount last). Under Tools, starter
+  one Save, or pasted straight from a spreadsheet (one line per item, the amount last; a line with no amount
+  starts a group). **Groups** of the household's own ("Home and bills", "Car") each have a colour and gather
+  spending lines under them, with the group's budget; the desktop Overview will show spending per group. Under Tools, starter
   categories can be moved into yours and unused ones removed; starting again from a pasted budget is set
   apart. The home screen's **List** draws each budget line as a bar: the full width is 100% of the budget,
   filled to what has been spent, with the percentage; over budget turns red with "over".

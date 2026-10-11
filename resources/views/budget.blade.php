@@ -17,10 +17,20 @@
 
     <form method="POST" action="{{ route('budget.update') }}" class="stack" data-save-bar>
         @csrf
-        @foreach (['expense' => [$expenses, 'Spending lines'], 'income' => [$incomes, 'Money in lines']] as $kind => [$lines, $heading])
+        {{-- Spending lines under their groups, in the groups' order, and those without a group last; with no groups yet, one list. --}}
+        @php($sections = $groups->isEmpty() ? [[null, $expenses]] : [...$groups->map(fn ($g) => [$g, $expenses->where('category_group_id', $g->id)])->all(), [null, $expenses->whereNull('category_group_id')]])
+        @foreach (['expense' => [$sections, 'Spending lines'], 'income' => [[[null, $incomes]], 'Money in lines']] as $kind => [$parts, $heading])
             <section class="section" aria-labelledby="{{ $kind }}-h">
                 <div class="section-head"><h2 id="{{ $kind }}-h">{{ $heading }}</h2><span class="muted">Rand a month</span></div>
                 <div class="card">
+                    @foreach ($parts as [$group, $lines])
+                        @if ($kind === 'expense' && $groups->isNotEmpty() && ($group !== null || $lines->isNotEmpty()))
+                            <div @class(['budget-group-head', 'group-colour-'.$group?->colour => $group !== null])>
+                                <span @class(['group-dot', 'none' => $group === null]) aria-hidden="true"></span>
+                                <span class="grow">{{ $group?->name ?? 'No group' }}</span>
+                                <span class="muted">{{ money((int) $lines->sum('budget_cents')) }}</span>
+                            </div>
+                        @endif
                     @foreach ($lines as $category)
                         <div class="budget-row">
                             @if ($kind === 'expense')
@@ -40,7 +50,18 @@
                             <span class="item-main">
                                 <label class="visually-hidden" for="name-{{ $category->id }}">Name</label>
                                 <input type="text" class="name-input" name="name[{{ $category->id }}]" id="name-{{ $category->id }}" value="{{ $category->name }}" maxlength="100" required>
-                                <span class="item-sub">{{ $used[$category->id] ?? 0 }} {{ ($used[$category->id] ?? 0) === 1 ? 'transaction' : 'transactions' }}</span>
+                                <span class="item-sub line-meta">
+                                    @if ($kind === 'expense' && $groups->isNotEmpty())
+                                        <label class="visually-hidden" for="group-{{ $category->id }}">Group for {{ $category->name }}</label>
+                                        <select class="group-select" name="group[{{ $category->id }}]" id="group-{{ $category->id }}">
+                                            <option value="">No group</option>
+                                            @foreach ($groups as $g)
+                                                <option value="{{ $g->id }}" @selected($category->category_group_id === $g->id)>{{ $g->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    @endif
+                                    <span>{{ $used[$category->id] ?? 0 }} {{ ($used[$category->id] ?? 0) === 1 ? 'transaction' : 'transactions' }}</span>
+                                </span>
                             </span>
                             <label class="rand">
                                 <span aria-hidden="true">R</span>
@@ -48,6 +69,7 @@
                                 <input type="number" name="budget[{{ $category->id }}]" step="0.01" min="0" inputmode="decimal" placeholder="None" value="{{ $category->budget_cents !== null ? number_format($category->budget_cents / 100, 2, '.', '') : '' }}">
                             </label>
                         </div>
+                    @endforeach
                     @endforeach
                 </div>
             </section>
@@ -73,11 +95,48 @@
         </details>
 
         <div class="save-bar">
-            <span class="grow">Changes to names, amounts and icons</span>
+            <span class="grow">Changes to names, amounts, icons and groups</span>
             <button type="reset" class="ghost">Undo</button>
             <button type="submit">Save budget</button>
         </div>
     </form>
+
+    <section class="section" aria-labelledby="groups-h">
+        <div class="section-head"><h2 id="groups-h">Groups</h2></div>
+        <form method="POST" action="{{ route('budget.groups') }}" class="card groups-card">
+            @csrf
+            {{-- Enter in a name saves, rather than pressing the first row's Remove. --}}
+            <button type="submit" class="visually-hidden" tabindex="-1" aria-hidden="true">Save groups</button>
+            <p class="hint">Put spending lines together, like the sections of your budget spreadsheet. On a computer the Overview shows spending per group. Choose each line's group under its name above.</p>
+            @foreach ($groups as $group)
+                <div @class(['group-row', 'group-colour-'.$group->colour])>
+                    <label class="group-swatch">
+                        <span class="group-dot" aria-hidden="true"></span>
+                        <span class="visually-hidden">Colour for {{ $group->name }}</span>
+                        <select name="group_colour[{{ $group->id }}]" data-group-colour>
+                            @foreach (\App\Support\GroupColours::CHOICES as $colour => $colourLabel)
+                                <option value="{{ $colour }}" @selected($group->colour === $colour)>{{ $colourLabel }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label class="visually-hidden" for="group-name-{{ $group->id }}">Name</label>
+                    <input type="text" class="name-input" name="group_name[{{ $group->id }}]" id="group-name-{{ $group->id }}" value="{{ old('group_name.'.$group->id, $group->name) }}" maxlength="60" required>
+                    @php($count = $expenses->where('category_group_id', $group->id)->count())
+                    <span class="item-sub group-count">{{ $count }} {{ $count === 1 ? 'line' : 'lines' }}</span>
+                    @if (! $loop->first)
+                        <button type="submit" class="icon-button" name="action" value="up:{{ $group->id }}" aria-label="Move {{ $group->name }} up"><x-icon name="up" :size="20" /></button>
+                    @else
+                        <span class="icon-button-space" aria-hidden="true"></span>
+                    @endif
+                    <button type="submit" class="icon-button" name="action" value="remove:{{ $group->id }}" aria-label="Remove {{ $group->name }}"><x-icon name="trash" :size="20" /></button>
+                </div>
+            @endforeach
+            <div class="pair wide-first group-add">
+                <div class="field"><label for="new_group">{{ $groups->isEmpty() ? 'First group' : 'Add a group' }}</label><input type="text" name="new_group" id="new_group" maxlength="60" value="{{ old('new_group') }}" placeholder="For example Kids"></div>
+                <button type="submit" class="secondary">{{ $groups->isEmpty() ? 'Add' : 'Save groups' }}</button>
+            </div>
+        </form>
+    </section>
 
     <section class="section" aria-labelledby="tools-h">
         <div class="section-head"><h2 id="tools-h">Tools</h2></div>
@@ -90,7 +149,7 @@
                 </summary>
                 <form method="POST" action="{{ route('budget.paste') }}" class="disclosure-body">
                     @csrf
-                    <p class="hint">Copy the lines from your spreadsheet: one item per line, the monthly amount at the end. Each line becomes a category with that budget; an existing category with the same name gets the amount.</p>
+                    <p class="hint">Copy the lines from your spreadsheet: one item per line, the monthly amount at the end. Each line becomes a category with that budget; an existing category with the same name gets the amount. A line with a name and no amount, like a section heading, puts the lines under it in a group of that name.</p>
                     <label class="visually-hidden" for="list">Budget lines</label>
                     <textarea name="list" id="list" rows="8" placeholder="Everyday food items &amp; household basics    10000&#10;Petrol &amp; tolls    4000"></textarea>
                     <button type="submit" class="secondary">Read these lines</button>
