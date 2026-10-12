@@ -153,7 +153,7 @@ Each step is a branch merged into `main` with `composer check` green, and leaves
 | 3 | Overview screen with the look: tiles, Budget vs real, Budget lines table (no sparklines yet); sidebar item (done; until the charts come the table and Budget vs real share the second row) | New screen | Each panel's numbers; excluded transactions; no groups yet; empty household |
 | 4 | `Trends` and the charts: Spending and budget, Where it went, This month's pace, sparklines; range control (done) | Charts | `Charts` geometry; `Trends` bucketing with a start day of 25; chart labels carry the numbers |
 | 5 | Biggest changes; clicks through to Transactions, which learns a `group` filter (done) | Panel, links | Thresholds and ordering; each link's filter |
-| 6 | Polish: hover readout, check at 1280, 1440 and 1920 wide in Safari, light and dark | Hover readout | Browser screenshots at those widths |
+| 6 | Polish: hover readout, check at 1280, 1440 and 1920 wide, light and dark (done in Chromium; Safari still to look at on the Mac) | Hover readout | Browser screenshots at those widths |
 
 Steps 1 to 4 give the screen most of its value.
 
