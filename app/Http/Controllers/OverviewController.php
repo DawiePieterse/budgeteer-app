@@ -92,7 +92,7 @@ class OverviewController extends Controller
             'groupTotals' => $summary->groupTotals(),
             'lines' => $lines,
             'groupId' => $groupId,
-            'statuses' => $this->statuses($schedule, $period),
+            'statuses' => $this->statuses($schedule, $period, $isCurrent),
             'inChange' => self::change($summary->received(), $lastMonth->received(), moreIsGood: true),
             'outChange' => self::change($summary->spent(), $lastMonth->spent(), moreIsGood: false),
         ]);
@@ -147,10 +147,11 @@ class OverviewController extends Controller
      *
      * @return array<int, array{text: string, tone: string}>
      */
-    private function statuses(RecurringSchedule $schedule, BudgetPeriod $period): array
+    private function statuses(RecurringSchedule $schedule, BudgetPeriod $period, bool $isCurrent): array
     {
+        // In a month that is over, only what happened: a payment not seen then may not have existed yet.
         $occurrences = collect($schedule->occurrences(RecurringPayment::query()->where('active', true)->whereNotNull('category_id')->get(), $period))
-            ->reject(fn (Occurrence $o) => $o->status === Occurrence::SKIPPED);
+            ->reject(fn (Occurrence $o) => $o->status === Occurrence::SKIPPED || (! $isCurrent && in_array($o->status, [Occurrence::DUE, Occurrence::LATE], true)));
 
         $statuses = [];
         foreach ($occurrences->groupBy(fn (Occurrence $o) => $o->payment->category_id) as $categoryId => $group) {

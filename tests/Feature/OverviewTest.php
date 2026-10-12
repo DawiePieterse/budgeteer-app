@@ -206,3 +206,13 @@ it('lists one group\'s transactions', function () {
         ->assertSee('All groups')
         ->assertSeeText('1 transaction');
 });
+
+it('says only what happened to recurring payments in a month that is over', function () {
+    CarbonImmutable::setTestNow('2026-07-10 09:00');
+    overviewHousehold();
+    RecurringPayment::create(['name' => 'Medical aid', 'match_text' => 'MED', 'category_id' => Category::where('name', 'Medical')->sole()->id, 'amount_cents' => 400000, 'frequency' => 'monthly', 'day' => 2]);
+    Category::where('name', 'Medical')->update(['budget_cents' => 400000]);
+
+    $this->get('/overview?in=2026-05-15')->assertOk()->assertDontSee('Late');
+    $this->get('/overview')->assertOk()->assertSeeInOrder(['Medical', 'Late']);
+});
