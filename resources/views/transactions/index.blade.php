@@ -50,6 +50,18 @@
                 </select>
                 <x-icon name="down" :size="16" />
             </label>
+            @if ($groups->isNotEmpty())
+                <label @class(['pill-select', 'active' => request()->filled('group')])>
+                    <span class="visually-hidden">Group</span>
+                    <select name="group" data-autosubmit>
+                        <option value="">All groups</option>
+                        @foreach ($groups as $g)
+                            <option value="{{ $g->id }}" @selected((string) request('group') === (string) $g->id)>{{ $g->name }}</option>
+                        @endforeach
+                    </select>
+                    <x-icon name="down" :size="16" />
+                </label>
+            @endif
             <button type="submit" class="sm secondary search-button" data-autosubmit-hide>Show</button>
         </div>
     </form>

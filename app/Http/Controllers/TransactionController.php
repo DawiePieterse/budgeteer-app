@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\Category;
+use App\Models\CategoryGroup;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\Transaction;
@@ -31,6 +32,10 @@ class TransactionController extends Controller
         } elseif ($request->filled('category')) {
             $query->where('category_id', $request->integer('category'));
         }
+        // All the lines in one of the household's groups; the Overview links here with one.
+        if ($request->filled('group')) {
+            $query->whereIn('category_id', Category::query()->where('category_group_id', $request->integer('group'))->select('id'));
+        }
         // A budget month, given by its first day; the home screen links here with one.
         $household = $request->user()->household;
         $months = $this->months($household->period_start_day);
@@ -50,7 +55,7 @@ class TransactionController extends Controller
                 ->orWhereHas('order.items', fn ($items) => $items->where('name', 'like', $like)));
         }
 
-        $filtered = collect($request->only(['category', 'account', 'q', 'from', 'month', 'merchant']))->filter()->isNotEmpty();
+        $filtered = collect($request->only(['category', 'group', 'account', 'q', 'from', 'month', 'merchant']))->filter()->isNotEmpty();
         $transactions = (clone $query)->paginate(50)->withQueryString();
         // Each day's total, with the same filters, over the whole day even when it runs onto the next page.
         // Money moved between our own accounts is left out: it is neither spent nor received.
@@ -70,6 +75,7 @@ class TransactionController extends Controller
             'month' => $month,
             'category' => $request->filled('category') && $request->input('category') !== 'none' ? Category::query()->find($request->integer('category')) : null,
             'categories' => Category::query()->orderBy('kind')->orderBy('sort')->orderBy('name')->get()->groupBy(fn (Category $c) => $c->kind->value),
+            'groups' => CategoryGroup::query()->orderBy('sort')->orderBy('name')->get(),
         ]);
     }
 

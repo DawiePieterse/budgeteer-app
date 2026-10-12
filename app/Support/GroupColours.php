@@ -5,9 +5,11 @@ namespace App\Support;
 use App\Models\CategoryGroup;
 
 /**
- * Colours for the household's groups of budget lines: Apple's system colours, as on the desktop Overview.
- * Blue, green and red are left out: they mean spending, money in and over budget there. Pink comes last, as
- * it is the nearest to red. The group's name is always written next to its colour.
+ * Colours for the household's groups of budget lines: Apple's system colours, as on the desktop Overview,
+ * stepped where needed so neighbours stay apart for colour-blind readers too (checked with the dataviz
+ * palette validator, light and dark; the first four are apart from each other as well). Blue, green and
+ * red are left out: they mean spending, money in and over budget there. The group's name is always
+ * written next to its colour.
  */
 final class GroupColours
 {
@@ -16,11 +18,11 @@ final class GroupColours
         'indigo' => 'Indigo',
         'orange' => 'Orange',
         'teal' => 'Teal',
-        'purple' => 'Purple',
+        'pink' => 'Pink',
         'yellow' => 'Yellow',
         'brown' => 'Brown',
         'mint' => 'Mint',
-        'pink' => 'Pink',
+        'purple' => 'Purple',
     ];
 
     /** The first colour no other group in the household has yet, or the next in turn when all are used. */
