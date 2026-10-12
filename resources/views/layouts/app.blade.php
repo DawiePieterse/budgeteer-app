@@ -18,10 +18,11 @@
     @auth
         @php
             // Phones have five tabs; a wide screen lists more in a sidebar. Recurring, for example, is part of
-            // the Budget tab on a phone and its own item in the sidebar.
+            // the Budget tab on a phone and its own item in the sidebar; the Overview is for a computer only.
             $is = fn (string ...$names) => request()->routeIs(...$names);
             $items = [
                 ['home', 'Home', null, 'home', $is('home', 'people.show'), $is('home'), true],
+                ['overview', 'Overview', null, 'chart', false, $is('overview'), false],
                 ['transactions.index', 'Transactions', null, 'list', $is('transactions.*'), $is('transactions.*'), true],
                 ['categorise', 'Review', null, 'inbox', $is('categorise'), $is('categorise'), true],
                 ['budget', 'Budget', null, 'pie', $is('budget', 'recurring.*', 'projects.*'), $is('budget', 'projects.*'), true],
@@ -62,7 +63,7 @@
         </nav>
     @endauth
 
-    <main @class(['page', 'guest' => ! auth()->check()])>
+    <main @class(['page', 'guest' => ! auth()->check(), 'wide' => request()->routeIs('overview')])>
         @if (session('status'))
             <div class="notice ok" role="status"><x-icon name="check" :size="20" /><p>{{ session('status') }}</p></div>
         @endif

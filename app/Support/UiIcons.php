@@ -30,6 +30,7 @@ final class UiIcons
         'forward' => 'M9 6l6 6-6 6',
         'down' => 'M6 9l6 6 6-6',
         'up' => 'M6 15l6-6 6 6',
+        'chart' => 'M4 20h16M7 16v-4M12 16V6M17 16V9',
         'close' => 'M6 6l12 12 M18 6L6 18',
         'plus' => 'M12 5v14 M5 12h14',
         'check' => 'M5 12l5 5 9-10',
