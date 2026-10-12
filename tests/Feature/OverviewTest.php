@@ -53,7 +53,7 @@ it('compares a month still running with last month up to the same day', function
 
     $this->get('/overview')->assertOk()
         ->assertSee('21 days to go')
-        ->assertSeeInOrder(['Spent so far', 'R1,500', '25% less than Jun by now'])
+        ->assertSeeTextInOrder(['Spent so far', 'R1,500', '25% less than Jun by now'])
         ->assertSee('R13,500')                 // left to spend
         ->assertSee('R614 a day');             // R13,500 over the 22 days left, today included, to the nearest rand
 });
@@ -88,7 +88,8 @@ it('shows one group\'s lines, or those without a group', function () {
     $add('2026-07-03', 'Groceries', -3000);
     $add('2026-07-09', 'Fuel and car', -1000);
 
-    $lines = fn (string $query) => collect(explode('<tbody>', $this->get('/overview?in=2026-07-15'.$query)->getContent())[1]);
+    // The budget lines are the page's last table.
+    $lines = fn (string $query) => collect([last(explode('<tbody>', $this->get('/overview?in=2026-07-15'.$query)->getContent()))]);
 
     expect($lines('&group='.$food->id)->first())->toContain('Groceries')->not->toContain('Fuel and car')
         ->and($lines('&group=none')->first())->toContain('Fuel and car')->not->toContain('Groceries')
@@ -138,4 +139,70 @@ it('ignores a group filter that is not one value', function () {
     overviewHousehold();
 
     $this->get('/overview?group[]=1')->assertOk();
+});
+
+it('draws the months of the chosen range, each with its numbers and a link to its transactions', function () {
+    [, $add] = overviewHousehold();
+    foreach (range(1, 9) as $m) {
+        $add(sprintf('2026-%02d-05', $m), 'Groceries', -1000 * $m);
+        $add(sprintf('2026-%02d-25', $m), 'Consulting', 50000);
+    }
+
+    $twelve = $this->get('/overview?in=2026-09-15')->assertOk()->getContent();
+    expect(substr_count($twelve, 'class="chart-hit" aria-label='))->toBe(9) // nine months of data, all within 12
+        ->and($twelve)->toContain('aria-label="September 2026: spent R9,000.00, money in R50,000.00, budget R15,000.00"')
+        ->and($twelve)->toContain('href="'.e(route('transactions.index', ['month' => '2026-09-01'])).'"');
+
+    $six = $this->get('/overview?in=2026-09-15&range=6')->assertOk()->getContent();
+    expect(substr_count($six, 'class="chart-hit" aria-label='))->toBe(6)
+        ->and($six)->toMatch('#aria-current="true"\s*>6 months</a>#');
+
+    expect($this->get('/overview?in=2026-09-15&range=forever')->assertOk()->getContent())->toMatch('#aria-current="true"\s*>12 months</a>#'); // unknown: 12
+});
+
+it('shows where the money went by group, with every name and share in the legend', function () {
+    [, $add] = overviewHousehold();
+    $food = CategoryGroup::create(['name' => 'Food']);
+    Category::where('name', 'Groceries')->update(['category_group_id' => $food->id]);
+    $add('2026-07-03', 'Groceries', -3000);
+    $add('2026-07-09', 'Fuel and car', -1000);
+
+    $this->get('/overview?in=2026-07-15')->assertOk()
+        ->assertSeeInOrder(['Where it went', 'Food', 'R3,000', '75%', 'Other', 'R1,000', '25%'])
+        ->assertSee('aria-label="Food: R3,000.00, 75%"', false);
+});
+
+it('lists the lines that changed most against the months before', function () {
+    [, $add] = overviewHousehold();
+    foreach (range(1, 6) as $m) {
+        $add(sprintf('2026-%02d-05', $m), 'Eating out', -1000);
+    }
+    $add('2026-07-05', 'Eating out', -2000);
+
+    $this->get('/overview?in=2026-07-15')->assertOk()
+        ->assertSeeInOrder(['Biggest changes', 'July against the 6 months before', 'Eating out', 'R2,000 against R1,000 a month', '+100%']);
+    $this->get('/overview?in=2026-03-15')->assertOk()->assertSee('fewer than three months before it');
+});
+
+it('shows each line\'s six months before as a small line', function () {
+    [, $add] = overviewHousehold();
+    foreach (range(1, 7) as $m) {
+        $add(sprintf('2026-%02d-05', $m), 'Groceries', -1000 * $m);
+    }
+
+    $lines = last(explode('<tbody>', $this->get('/overview?in=2026-07-15')->getContent()));
+    expect($lines)->toContain('class="chart-spark group"');
+});
+
+it('lists one group\'s transactions', function () {
+    [, $add] = overviewHousehold();
+    $food = CategoryGroup::create(['name' => 'Food']);
+    Category::where('name', 'Groceries')->update(['category_group_id' => $food->id]);
+    $add('2026-07-03', 'Groceries', -3000, ['description' => 'WOOLWORTHS']);
+    $add('2026-07-09', 'Fuel and car', -1000, ['description' => 'SHELL GARAGE']);
+
+    $this->get('/transactions?group='.$food->id)->assertOk()
+        ->assertSee('Woolworths')->assertDontSee('Shell Garage')
+        ->assertSee('All groups')
+        ->assertSeeText('1 transaction');
 });

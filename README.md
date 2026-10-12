@@ -20,10 +20,14 @@ Laravel 12 for the Afrihost shared hosting that runs Bowls Buddy.
   People of their own. One stylesheet with light and dark colours, the Geist font served from the app
   (`public/fonts`, SIL Open Font License), line icons drawn inline, and no JavaScript needed to use any
   screen; small scripts only make it quicker.
-- **Overview** (computer only, in the sidebar): the budget month at a glance in the look of Apple's own apps:
-  money in, spent, left to spend and in − spent, each against last month up to the same day; every line with
-  its budget, what is spent and left, and its recurring payments (paid, due, late), filtered by group; and
-  budget against real per group. Charts and trends over the months follow ([docs/DESKTOP-PLAN.md](docs/DESKTOP-PLAN.md)).
+- **Overview** (computer only, in the sidebar): the budget month at a glance in the look of Apple's own apps.
+  Four tiles (money in, spent, left to spend, in − spent), each against last month up to the same day and with
+  the months before as a small line; spending and money in for each of the last 6 or 12 months (or all)
+  against the budget; where the money went by group; this month's pace day by day against last month and the
+  even pace; budget against real per group; the lines that changed most; and every line with its budget, what
+  is spent and left, its last six months and its recurring payments, filtered by group. Hovering or tabbing
+  to a month, day or slice shows its numbers; a month or line opens its transactions, which can also be
+  filtered by group.
 - **Statements:** choose a Standard Bank or Discovery Bank PDF on the phone. It is read in the browser with
   pdf.js and only its text is sent. The server reads every transaction and refuses the statement unless
   each line adds up to the running balance (and, for Standard Bank, the printed totals).
