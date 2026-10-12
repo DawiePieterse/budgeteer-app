@@ -2,6 +2,7 @@
 
 use App\Models\Account;
 use App\Models\Category;
+use App\Models\CategoryGroup;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\Transaction;
@@ -106,4 +107,39 @@ it('reads only the given household, also with nobody signed in', function () {
     $summary = MonthSummary::for($ours->household, july2026());
 
     expect($summary->spent())->toBe(100000)->and($summary->budgeted)->toBe(1000000);
+});
+
+it('adds up spending and budget per group, with lines without a group as Other', function () {
+    $user = member();
+    $this->actingAs($user);
+    $account = Account::factory()->create(['household_id' => $user->household_id]);
+    $food = CategoryGroup::create(['name' => 'Food']);
+    $car = CategoryGroup::create(['name' => 'Car']); // nothing in it yet
+    $groceries = summaryLine($user, 'Groceries', 1000000);
+    $eatingOut = summaryLine($user, 'Eating out', 200000);
+    $medical = summaryLine($user, 'Medical', 150000);
+    Category::whereIn('id', [$groceries->id, $eatingOut->id])->update(['category_group_id' => $food->id]);
+    Transaction::factory()->for($account)->create(['posted_on' => '2026-07-03', 'amount_cents' => -300000, 'category_id' => $groceries->id]);
+    Transaction::factory()->for($account)->create(['posted_on' => '2026-07-04', 'amount_cents' => -50000, 'category_id' => $eatingOut->id]);
+    Transaction::factory()->for($account)->create(['posted_on' => '2026-07-05', 'amount_cents' => -20000, 'category_id' => $medical->id]);
+    Transaction::factory()->for($account)->create(['posted_on' => '2026-07-06', 'amount_cents' => -7000]); // not categorised
+
+    expect(MonthSummary::for($user->household, july2026())->groupTotals())->toBe([
+        ['id' => $food->id, 'name' => 'Food', 'colour' => 'indigo', 'cents' => 350000, 'budget' => 1200000],
+        ['id' => $car->id, 'name' => 'Car', 'colour' => 'orange', 'cents' => 0, 'budget' => 0],
+        ['id' => null, 'name' => 'Other', 'colour' => null, 'cents' => 27000, 'budget' => 150000],
+    ]);
+});
+
+it('gives the biggest lines and everything else when there are no groups', function () {
+    $user = member();
+    $account = Account::factory()->create(['household_id' => $user->household_id]);
+    foreach (['Groceries' => 6, 'Eating out' => 5, 'Fuel and car' => 4, 'Medical' => 3, 'Insurance' => 2, 'Giving' => 1, 'Cash' => 1] as $name => $rand) {
+        Transaction::factory()->for($account)->create(['posted_on' => '2026-07-03', 'amount_cents' => -$rand * 100, 'category_id' => summaryLine($user, $name)->id]);
+    }
+
+    $totals = MonthSummary::for($user->household, july2026())->groupTotals();
+
+    expect(array_column($totals, 'name'))->toBe(['Groceries', 'Eating out', 'Fuel and car', 'Medical', 'Insurance', 'Everything else'])
+        ->and($totals[5]['cents'])->toBe(200);
 });

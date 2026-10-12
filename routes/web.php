@@ -7,6 +7,7 @@ use App\Http\Controllers\CardController;
 use App\Http\Controllers\CategoriseController;
 use App\Http\Controllers\GmailController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\OverviewController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PushController;
@@ -30,6 +31,7 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware(['auth', 'throttle:120,1'])->group(function () {
     Route::get('/', HomeController::class)->name('home');
+    Route::get('/overview', OverviewController::class)->name('overview');
     Route::post('/logout', [GoogleController::class, 'logout'])->name('logout');
 
     Route::get('/statements', [StatementController::class, 'index'])->name('statements.index');
